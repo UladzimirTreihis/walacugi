@@ -3,7 +3,7 @@ import { Container, Typography } from "@mui/material";
 
 function About({data}) {
   return (
-    <Container sx={{ py: 4 }}>
+    <Container sx={{ py: 4 }} id="about">
       <Typography variant="h4" gutterBottom align="center">
         About Us
       </Typography>
