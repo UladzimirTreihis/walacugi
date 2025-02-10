@@ -3,8 +3,10 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import data from './data.json'
 import Main from "./components/Main";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import "./i18n";
 
 import Events from "./components/Events";
+import EventFull from "./components/EventFull"
 import Root from "./components/Root";
 
 
@@ -31,6 +33,10 @@ const router = createBrowserRouter([
       }
     ]
 
+  },
+  {
+    path: "/event/:eventId",
+    element: <EventFull allEvents={data.events}/>
   }
 ])
 

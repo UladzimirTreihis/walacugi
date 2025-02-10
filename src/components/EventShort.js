@@ -13,7 +13,7 @@ export default function EventShort({ data }) {
     : description;
 
   return (
-    <Card sx={{ width: 300, margin: 2, display: "flex", flexDirection: "column" }}>
+    <Card sx={{ width: 300, margin: 2, display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Carousel of images at the top */}
       <Carousel
         navButtonsAlwaysVisible
@@ -41,11 +41,11 @@ export default function EventShort({ data }) {
       </Carousel>
 
       {/* Text content below */}
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
+      <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+        <Typography variant="h6" gutterBottom sx={{ minHeight: "65px" }}>
           {title}
         </Typography>
-        <Typography variant="body2" paragraph>
+        <Typography variant="body2" paragraph sx={{ flexGrow: 1, minHeight: "80px" }}>
           {excerpt}
         </Typography>
 
@@ -54,6 +54,7 @@ export default function EventShort({ data }) {
           component={Link} 
           to={`/event/${id}`} 
           variant="outlined"
+          sx={{ marginTop: "auto" }}
         >
           Read More
         </Button>
