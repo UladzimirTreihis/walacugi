@@ -1,11 +1,13 @@
 import React from "react";
 import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
 import Navbar from "./Navbar";
+import { useTranslation } from "react-i18next";
+
 
 function Intro() {
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-  
+    const { t } = useTranslation();
   return (
     <Box>
       {/* Image fills the container width */}
@@ -48,7 +50,7 @@ function Intro() {
           Walacugi
         </Typography>
         <Typography variant="body1">
-          Full website is launching soon! Już wkrótce!
+          {t("welcome")}
         </Typography>
       </Box>
     </Box>
