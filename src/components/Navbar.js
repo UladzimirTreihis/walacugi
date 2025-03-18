@@ -3,9 +3,12 @@ import { AppBar, Toolbar, Button, Box } from "@mui/material";
 import { Link } from "react-router-dom"
 import NavbarButton from "./shared/NavbarButton";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 
 function Navbar() {
   const { t, i18n } = useTranslation();
+  const adminToken = useSelector((state) => state.auth.token); // Get token from Redux
+
   return (
     <AppBar position="sticky">
       <Toolbar sx={{
@@ -18,6 +21,11 @@ function Navbar() {
         <NavbarButton component={Link} variant="contained" to={"/"}>Walacugi</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/"} scrollToId="about">{t("about")}</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/events"}>{t("events")}</NavbarButton>
+        {adminToken  
+        ? <NavbarButton component={Link} variant="contained" to={"/admin"}>{t("admin")}</NavbarButton>
+        : ""
+        }
+
         <Box sx={{ display: "flex", gap: 0 }}>
           <Button color="white" onClick={() => i18n.changeLanguage("pl")} sx={{ minWidth: "auto", padding: "4px 0px 4px 8px", margin: 0 }}>Pl/</Button>
           <Button color="white" onClick={() => i18n.changeLanguage("en")} sx={{ minWidth: "auto", padding: "4px 0px", margin: 0 }}>En</Button>
