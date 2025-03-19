@@ -153,3 +153,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Ignore frontend dependencies
+frontend/node_modules
+frontend/build
+
+# Ignore backend dependencies & sensitive files
+backend/node_modules
+backend/uploads        # Ignore uploaded images (if using S3)
+backend/.env          # Do NOT push credentials
+backend/*.log
+backend/*.db
