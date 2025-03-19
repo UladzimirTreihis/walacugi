@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   mongo:
-    image: mongo:latest
+    image: mongo:7
     container_name: mongodb_container
     restart: always
     ports:
@@ -10,7 +10,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
-      - mongo_data:/data/db
+      - mongo_data:/data/db # Persistent storage for MongoDB
 
   app:
     build: .
@@ -21,10 +21,9 @@ services:
     depends_on:
       - mongo
     environment:
-      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/mydatabase?authSource=admin
+      MONGO_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/mydatabase?authSource=admin
     volumes:
-      - .:/app
-      - /app/node_modules
+      - /app/node_modules # Prevents overwriting node_modules
 
 volumes:
   mongo_data:
