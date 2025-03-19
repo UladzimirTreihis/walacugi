@@ -5,5 +5,5 @@
 
 [build]
   base = "frontend"
-  command = "CI=false npm run build" # Change to your React build command
+  command = "CI=false npm run build"
   publish = "build" 
