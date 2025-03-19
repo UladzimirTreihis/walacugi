@@ -5,7 +5,9 @@ console.log("API URL: ", API_URL)
 // Async thunk to fetch events
 export const fetchEvents = createAsyncThunk("events/fetchEvents", async () => {
   try {
+    console.log("Attempting response")
     const response = await fetch(`${API_URL}/events`);
+    console.log("Response: ", response)
     if (!response.ok) throw new Error("Failed to fetch events");
     return await response.json();
   } catch (error) {

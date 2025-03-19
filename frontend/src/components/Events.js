@@ -17,6 +17,7 @@ export default function Events() {
   // Fetch only if events are empty
   useEffect(() => {
     if (events.length === 0) {
+      console.log("Fetching events")
       dispatch(fetchEvents());
     }
   }, [dispatch, events.length]);
