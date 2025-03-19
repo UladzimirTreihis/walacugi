@@ -17,8 +17,8 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
-const MONGO_USERNAME = process.env.MONGO_USERNAME;
-const MONGO_PASSWORD = process.env.MONGO_PASSWORD;
+const MONGO_USERNAME = process.env.MONGO_INITDB_ROOT_USERNAME;
+const MONGO_PASSWORD = process.env.MONGO_INITDB_ROOT_PASSWORD;
 const MONGO_DATABASE = process.env.MONGO_DATABASE;
 const DB_URI = process.env.MONGO_URL || `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DATABASE}?authSource=admin`
 
