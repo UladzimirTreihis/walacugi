@@ -6,4 +6,4 @@
 [build]
   base = "frontend"
   command = "CI=false npm run build" # Change to your React build command
-  publish = "build" # This tells Netlify to serve only frontend
+  publish = "build" 
