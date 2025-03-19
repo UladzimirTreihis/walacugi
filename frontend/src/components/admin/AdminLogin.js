@@ -14,7 +14,7 @@ export default function AdminLogin() {
   const handleLogin = async () => {
     setError(null);
 
-    const response = await post("/login", { password });
+    const response = await post("/admin/login", { password });
 
     if (!response || !response.token) {
       setError("Invalid credentials");

@@ -24,11 +24,8 @@ const router = Router();
 router.post("/login", async (req, res) => {
   const { password } = req.body;
 
-  console.log("Entered Password:", password);
-
   // 🔹 Compare entered password with the hashed password from .env
   const isMatch = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH);
-  console.log("Password Match:", isMatch);
 
   if (!isMatch) {
     return res.status(401).json({ error: "Invalid credentials" });
