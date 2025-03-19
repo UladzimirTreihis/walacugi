@@ -12,7 +12,6 @@ router.get('/', async (req, res) => {
   try {
     console.log("Getting")
     const newsList = await News.find().sort({ createdAt: -1 });
-    console.log("Newslist", newsList)
     res.json(newsList);
   } catch (err) {
     res.status(500).json({ error: err.message });
