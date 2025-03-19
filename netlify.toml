@@ -5,5 +5,5 @@
 
 [build]
   base = "frontend"
-  command = "CI=false npm install --legacy-peer-deps && npm run build" # Change to your React build command
+  command = "CI=false npm run build" # Change to your React build command
   publish = "frontend/build" # This tells Netlify to serve only frontend
