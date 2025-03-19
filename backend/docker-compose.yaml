@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongodb_container
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+
+  app:
+    build: .
+    container_name: node_app
+    restart: always
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mongo
+    environment:
+      DATABASE_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/mydatabase?authSource=admin
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  mongo_data:
