@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const API_URL = process.env.REACT_APP_API_URL; // Get API URL from .env
+const API_URL = process.env.REACT_APP_API_URL;
 console.log("API URL: ", API_URL)
 // Async thunk to fetch events
 export const fetchEvents = createAsyncThunk("events/fetchEvents", async () => {
