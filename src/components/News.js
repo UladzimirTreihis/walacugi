@@ -1,32 +1,37 @@
-import React, {useState, useEffect} from "react";
+import React, { useEffect } from "react";
 import { Box, Container, Typography } from "@mui/material";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchNews } from "../store/newsSlice";
 import NewsShort from "./NewsShort";
 import SimpleNews from "./SimpleNews";
 import { useTranslation } from "react-i18next";
-import useApi from "../hooks/useApi"
 
 export default function News() {
-    const { t } = useTranslation();
-    const { get, loading, error } = useApi();
-    const [news, setNews] = useState([]);
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
 
-    useEffect(() => {
-      get("/news")
-        .then((data) => setNews(data))
-        .catch((err) => console.error("Failed to fetch news", err));
-    }, []);
+  // Get news from Redux
+  const news = useSelector((state) => state.news.items);
+  const loading = useSelector((state) => state.news.loading);
+  const error = useSelector((state) => state.news.error);
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error}</p>;
+  // Fetch only if news is empty
+  useEffect(() => {
+    if (news.length === 0) {
+      dispatch(fetchNews());
+    }
+  }, [dispatch, news.length]);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <Container>
-        <Typography variant="h4" gutterBottom align="center">
-            {t("news")}
-        </Typography>
+      <Typography variant="h4" gutterBottom align="center">
+        {t("news")}
+      </Typography>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
-        
         {/* First News Item - Full Width */}
         {news.length > 0 && (
           <Box sx={{ width: "100%" }}>
@@ -55,7 +60,6 @@ export default function News() {
             </Box>
           ))}
         </Box>
-
       </Box>
     </Container>
   );

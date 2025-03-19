@@ -31,6 +31,7 @@ export default function NewsShort({ data, fullDescription }) {
       component={Link}
       to={`/news/${_id}`}
       sx={{
+        textDecoration: "none",
         borderRadius: 2, 
         boxShadow: 2, 
         display: "block", 
@@ -49,10 +50,10 @@ export default function NewsShort({ data, fullDescription }) {
       {/* Content */}
       <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
-        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+        <Typography variant="body2" sx={{ flexGrow: 1}}>
           {fullDescription 
           ? description.split("\n\n").map((paragraph, index) => (
-            <Typography key={index} variant="body2" paragraph>
+            <Typography key={index} variant="body2" paragraph >
                 {paragraph}
             </Typography>
           )) 

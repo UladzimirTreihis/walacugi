@@ -54,7 +54,7 @@ router.put('/:id', checkAdminToken, async (req, res) => {
 // DELETE /api/events/:id (admin only)
 router.delete('/:id', checkAdminToken, async (req, res) => {
   try {
-    const deleted = await Event.findByIdAndRemove(req.params.id);
+    const deleted = await Event.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {

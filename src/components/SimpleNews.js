@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Card, CardMedia, CardContent, Typography, Button } from "@mui/material";
 import { Link } from "react-router-dom";
 import useApi from "../hooks/useApi";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { deleteNews } from "../store/newsSlice";
+
 
 
 export default function SimpleNews({ data }) {
@@ -11,6 +13,7 @@ export default function SimpleNews({ data }) {
   const adminToken = useSelector((state) => state.auth.token); 
   const isAdmin = adminToken ? true : false
   const { del } = useApi();
+  const dispatch = useDispatch();
 
   // Delete logic for admin 
   const handleDeleteNews = async (newsId) => {
@@ -22,6 +25,7 @@ export default function SimpleNews({ data }) {
 
     if (response) {
       console.log("News deleted successfully");
+      dispatch(deleteNews(newsId));
     } else {
       console.error("Failed to delete news");
     }
@@ -42,6 +46,7 @@ export default function SimpleNews({ data }) {
       component={Link}
       to={`/news/${_id}`}
       sx={{
+        textDecoration: "none",
         borderRadius: 2, 
         boxShadow: 2, 
         display: "block", 
