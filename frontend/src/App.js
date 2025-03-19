@@ -25,7 +25,7 @@ import AdminEditEventForm from "./components/admin/AdminEditEventForm";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#5F97CF", // Customize your primary color
+      main: "#5F97CF",
     },
   },
 });
