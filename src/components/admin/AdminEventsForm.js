@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Box, Button, TextField, Typography, CircularProgress, IconButton } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { TextField, Button, Box, Typography, CircularProgress } from "@mui/material";
 import useApi from "../../hooks/useApi";
 
-export default function AdminNewsForm() {
+export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState([]); // Store multiple images
-  const [imagePreviews, setImagePreviews] = useState([]); // Previews for images
+  const [imagePreviews, setImagePreviews] = useState([]); // Previews for selected images
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
@@ -17,12 +16,12 @@ export default function AdminNewsForm() {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
 
-    // Generate image preview URLs
+    // Generate image previews
     const previews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews(previews);
   };
 
-  // Upload multiple images
+  // Upload multiple images to S3
   async function handleUpload() {
     if (selectedFiles.length === 0) return [];
 
@@ -32,7 +31,7 @@ export default function AdminNewsForm() {
       const formData = new FormData();
       formData.append("images", file);
 
-      const res = await post("/upload/news-image", formData, {
+      const res = await post("/upload/event-image", formData, {
         "x-admin-token": token,
       });
 
@@ -43,31 +42,33 @@ export default function AdminNewsForm() {
 
       uploadedFilePaths.push(...res.filePaths);
     }
-    
-    return uploadedFilePaths;
+
+    return uploadedFilePaths; // Return array of uploaded image URLs
   }
 
-  // Create news item
-  async function handleCreateNews() {
+  // Handle event creation
+  async function handleCreateEvent() {
     try {
+      // Upload images first
       const filePaths = await handleUpload();
 
-      const newsBody = {
+      // Prepare event object
+      const eventBody = {
         title,
         description,
-        images: filePaths,
+        images: filePaths, // Store uploaded image URLs
       };
 
-      const result = await post("/news", newsBody, {
+      const result = await post("/events", eventBody, {
         "x-admin-token": token,
       });
 
       if (!result) {
-        console.error("Create news failed.");
+        console.error("Create event failed.");
         return;
       }
 
-      console.log("News created:", result);
+      console.log("Event created:", result);
 
       // Reset form fields
       setSelectedFiles([]);
@@ -75,25 +76,19 @@ export default function AdminNewsForm() {
       setTitle("");
       setDescription("");
     } catch (error) {
-      console.error("Error creating news:", error);
+      console.error("Error creating event:", error);
     }
   }
 
-  // Remove selected image
-  const handleRemoveImage = (index) => {
-    setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-    setImagePreviews((prevPreviews) => prevPreviews.filter((_, i) => i !== index));
-  };
-
   return (
-    <Box sx={{ maxWidth: 600, mx: "auto", p: 3, boxShadow: 2, borderRadius: 2 }}>
+    <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Create News
+        Create Event
       </Typography>
 
+      {loading && <CircularProgress />}
       {error && <Typography color="error">{error}</Typography>}
 
-      {/* Title Input */}
       <TextField
         fullWidth
         label="Title"
@@ -102,7 +97,6 @@ export default function AdminNewsForm() {
         margin="normal"
       />
 
-      {/* Description Input */}
       <TextField
         fullWidth
         label="Description"
@@ -114,38 +108,31 @@ export default function AdminNewsForm() {
       />
 
       {/* Image Previews */}
-      {imagePreviews.length > 0 && (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
-          {imagePreviews.map((src, index) => (
-            <Box key={index} sx={{ position: "relative", width: 100, height: 100 }}>
-              <img src={src} alt="Preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
-              <IconButton
-                sx={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.8)" }}
-                onClick={() => handleRemoveImage(index)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-        </Box>
-      )}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
+        {imagePreviews.map((img, index) => (
+          <Box key={index} sx={{ width: 100, height: 100, borderRadius: 2, overflow: "hidden" }}>
+            <img src={img} alt="preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
+          </Box>
+        ))}
+      </Box>
 
-      {/* File Input */}
-      <Button variant="contained" component="label" fullWidth sx={{ mt: 2 }}>
-        Select Images
-        <input type="file" multiple hidden onChange={handleFileChange} />
-      </Button>
+      {/* Upload New Images */}
+      <input
+        type="file"
+        multiple
+        onChange={handleFileChange}
+        style={{ marginTop: 16 }}
+      />
 
-      {/* Submit Button */}
       <Button
         variant="contained"
         color="primary"
         fullWidth
         sx={{ mt: 2 }}
-        onClick={handleCreateNews}
+        onClick={handleCreateEvent}
         disabled={loading}
       >
-        {loading ? <CircularProgress size={24} /> : "Create News"}
+        {loading ? "Creating..." : "Create Event"}
       </Button>
     </Box>
   );

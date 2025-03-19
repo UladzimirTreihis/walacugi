@@ -5,26 +5,26 @@ import { TextField, Button, Box, Typography, CircularProgress, IconButton } from
 import DeleteIcon from "@mui/icons-material/Delete";
 import useApi from "../../hooks/useApi";
 
-export default function AdminEditNewsForm() {
-  const { newsId } = useParams();
+export default function AdminEditEventForm() {
+  const { eventId } = useParams();
   const navigate = useNavigate();
   const { get, put, post, loading, error } = useApi();
   const adminToken = useSelector((state) => state.auth.token);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [existingImages, setExistingImages] = useState([]); // Existing image URLs
+  const [existingImages, setExistingImages] = useState([]); // Existing event images
   const [newFiles, setNewFiles] = useState([]); // New images to upload
   const [newImagePreviews, setNewImagePreviews] = useState([]); // Previews for new images
 
-  // Fetch existing news data
+  // Fetch existing event data
   useEffect(() => {
     if (!adminToken) {
       navigate("/admin/login"); // Redirect if no token
       return;
     }
 
-    get(`/news/${newsId}`, { Authorization: `Bearer ${adminToken}` })
+    get(`/events/${eventId}`, { Authorization: `Bearer ${adminToken}` })
       .then((data) => {
         if (data) {
           setTitle(data.title || "");
@@ -32,8 +32,8 @@ export default function AdminEditNewsForm() {
           setExistingImages(data.images || []);
         }
       })
-      .catch((err) => console.error("Failed to fetch news:", err));
-  }, [newsId, adminToken, navigate]);
+      .catch((err) => console.error("Failed to fetch event:", err));
+  }, [eventId, adminToken, navigate]);
 
   // Handle file selection and generate previews
   const handleFileChange = (e) => {
@@ -55,7 +55,7 @@ export default function AdminEditNewsForm() {
       const formData = new FormData();
       formData.append("images", file);
 
-      const res = await post("/upload/news-image", formData, {
+      const res = await post("/upload/event-image", formData, {
         Authorization: `Bearer ${adminToken}`,
       });
 
@@ -70,8 +70,8 @@ export default function AdminEditNewsForm() {
     return uploadedFilePaths;
   }
 
-  // Handle news update
-  async function handleUpdateNews() {
+  // Handle event update
+  async function handleUpdateEvent() {
     try {
       if (!adminToken) {
         console.error("Unauthorized: No admin token found.");
@@ -81,14 +81,14 @@ export default function AdminEditNewsForm() {
       // Upload new images first
       const uploadedImages = await handleUpload();
 
-      // Prepare updated news object
-      const updatedNews = {
+      // Prepare updated event object
+      const updatedEvent = {
         title,
         description,
         images: [...existingImages, ...uploadedImages], // Keep old images + new ones
       };
 
-      const result = await put(`/news/${newsId}`, updatedNews, {
+      const result = await put(`/events/${eventId}`, updatedEvent, {
         Authorization: `Bearer ${adminToken}`,
       });
 
@@ -97,10 +97,10 @@ export default function AdminEditNewsForm() {
         return;
       }
 
-      console.log("News updated:", result);
+      console.log("Event updated:", result);
       navigate("/admin"); // Redirect after update
     } catch (error) {
-      console.error("Error updating news:", error);
+      console.error("Error updating event:", error);
     }
   }
 
@@ -112,7 +112,7 @@ export default function AdminEditNewsForm() {
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Edit News
+        Edit Event
       </Typography>
 
       {loading && <CircularProgress />}
@@ -143,7 +143,7 @@ export default function AdminEditNewsForm() {
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 1 }}>
         {existingImages.map((img, index) => (
           <Box key={index} sx={{ position: "relative", width: 100, height: 100, borderRadius: 2, overflow: "hidden" }}>
-            <img src={img} alt="news" width="100%" height="100%" style={{ objectFit: "cover" }} />
+            <img src={img} alt="event" width="100%" height="100%" style={{ objectFit: "cover" }} />
             <IconButton
               sx={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.8)" }}
               onClick={() => handleDeleteImage(index)}
@@ -174,10 +174,10 @@ export default function AdminEditNewsForm() {
         color="primary"
         fullWidth
         sx={{ mt: 2 }}
-        onClick={handleUpdateNews}
+        onClick={handleUpdateEvent}
         disabled={loading}
       >
-        {loading ? "Updating..." : "Update News"}
+        {loading ? "Updating..." : "Update Event"}
       </Button>
     </Box>
   );

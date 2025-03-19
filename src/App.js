@@ -18,6 +18,9 @@ import AdminEditNewsForm from "./components/admin/AdminEditNewsForm";
 import AdminNewsForm from "./components/admin/AdminNewsForm";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import AdminLogin from "./components/admin/AdminLogin";
+import AdminEventsForm from "./components/admin/AdminEventsForm";
+import AdminEditEventForm from "./components/admin/AdminEditEventForm";
+
 
 const theme = createTheme({
   palette: {
@@ -43,15 +46,26 @@ const router = createBrowserRouter([
       {
         path: "/admin",
         element: <AdminPage />,
+        children: [
+          {
+            path: "/admin/news/edit/:newsId",
+            element: <AdminEditNewsForm />,
+          },
+          {
+            path: "/admin/news/create",
+            element: <AdminNewsForm />,
+          },
+          {
+            path: "/admin/events/edit/:eventId",
+            element: <AdminEditEventForm />,
+          },
+          {
+            path: "/admin/events/create",
+            element: <AdminEventsForm />,
+          },
+        ]
       },
-      {
-        path: "/admin/news/edit/:newsId",
-        element: <AdminEditNewsForm />,
-      },
-      {
-        path: "/admin/news/create",
-        element: <AdminNewsForm />,
-      },
+
     ],
   },
   {

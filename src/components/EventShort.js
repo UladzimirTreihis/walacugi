@@ -3,9 +3,35 @@ import React from "react";
 import { Card, CardMedia, CardContent, Typography, Button, Box } from "@mui/material";
 import Carousel from "react-material-ui-carousel"; // npm install react-material-ui-carousel
 import { Link } from "react-router-dom"; // or any routing approach
+import { useSelector, useDispatch } from "react-redux";
+import useApi from "../hooks/useApi";
+import { deleteEvent } from "../store/eventsSlice";
+
 
 export default function EventShort({ data }) {
-  const { id, images, title, description } = data;
+  const { _id, images, title, description } = data;
+  const adminToken = useSelector((state) => state.auth.token); 
+  const isAdmin = adminToken ? true : false
+  const dispatch = useDispatch();
+
+
+  const { del } = useApi(); 
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
+
+    const response = await del(`/events/${eventId}`, {
+      "x-admin-token": adminToken
+    });
+
+    if (response) {
+      console.log("Event deleted successfully");
+      dispatch(deleteEvent(eventId));
+
+    } else {
+      console.error("Failed to delete event");
+    }
+  };
 
   // We'll just show 100 chars, then '...' 
   const excerpt = description.length > 100
@@ -52,12 +78,33 @@ export default function EventShort({ data }) {
         {/* Link or button to full page */}
         <Button 
           component={Link} 
-          to={`/event/${id}`} 
+          to={`/events/${_id}`} 
           variant="outlined"
           sx={{ marginTop: "auto" }}
         >
           Read More
         </Button>
+        {isAdmin && (
+            <>
+              <Button
+                variant="outlined"
+                color="primary"
+                component={Link}
+                to={`/admin/events/edit/${data._id}`}
+                sx={{ mt: 1 }}
+              >
+                Edit
+              </Button>
+              <Button
+              variant="outlined"
+              color="error"
+              sx={{ mt: 1, ml: 2 }}
+              onClick={() => handleDeleteEvent(data._id)}
+              >
+              Delete
+            </Button>
+          </>
+          )}
       </CardContent>
     </Card>
   );

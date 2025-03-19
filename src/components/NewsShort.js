@@ -2,13 +2,16 @@ import React from "react";
 import { Card, CardMedia, CardContent, Typography, Button } from "@mui/material";
 import { Link } from "react-router-dom";
 import useApi from "../hooks/useApi";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { deleteNews } from "../store/newsSlice";
 
 
 export default function NewsShort({ data, fullDescription }) {
   const { _id, images, title, description } = data;
   const adminToken = useSelector((state) => state.auth.token); 
   const isAdmin = adminToken ? true : false
+  const dispatch = useDispatch();
+
 
   const { del } = useApi(); 
 
@@ -21,6 +24,8 @@ export default function NewsShort({ data, fullDescription }) {
 
     if (response) {
       console.log("News deleted successfully");
+      dispatch(deleteNews(newsId));
+
     } else {
       console.error("Failed to delete news");
     }
