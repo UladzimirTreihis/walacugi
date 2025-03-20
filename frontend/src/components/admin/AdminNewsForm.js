@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Box, Button, TextField, Typography, CircularProgress, IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import useApi from "../../hooks/useApi";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css"; // Import styles
 
 export default function AdminNewsForm() {
   const [selectedFiles, setSelectedFiles] = useState([]); // Store multiple images
@@ -11,12 +13,9 @@ export default function AdminNewsForm() {
 
   const { post, loading, error } = useApi();
 
-  // Handle file selection and generate previews
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
-
-    // Generate image preview URLs
     const previews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews(previews);
   };
@@ -97,16 +96,9 @@ export default function AdminNewsForm() {
         margin="normal"
       />
 
-      {/* Description Input */}
-      <TextField
-        fullWidth
-        label="Description"
-        multiline
-        rows={4}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        margin="normal"
-      />
+      <Typography variant="h6" gutterBottom>Description</Typography>
+      <ReactQuill multiline theme="snow" value={description} onChange={setDescription} style={{ marginBottom: 50, height: 300 }} />
+
 
       {/* Image Previews */}
       {imagePreviews.length > 0 && (

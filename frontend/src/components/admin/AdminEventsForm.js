@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { TextField, Button, Box, Typography, CircularProgress } from "@mui/material";
+import { TextField, Button, Box, Typography, CircularProgress, IconButton } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css"; // Import styles
+
 
 export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -11,7 +13,8 @@ export default function AdminEventsForm() {
   const [description, setDescription] = useState(""); // Store as HTML
 
   const { post, loading, error } = useApi();
-  const handleFileChange = (e) => {
+
+  const handleFileChange = (e) => {    
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
     const previews = files.map((file) => URL.createObjectURL(file));
@@ -58,6 +61,12 @@ export default function AdminEventsForm() {
     }
   }
 
+  // Remove selected image
+  const handleRemoveImage = (index) => {
+    setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setImagePreviews((prevPreviews) => prevPreviews.filter((_, i) => i !== index));
+  };
+
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>Create Event</Typography>
@@ -66,19 +75,41 @@ export default function AdminEventsForm() {
 
       <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
       <Typography variant="h6" gutterBottom>Description</Typography>
-      <ReactQuill theme="snow" value={description} onChange={setDescription} style={{ marginBottom: 20 }} />
+      <ReactQuill multiline theme="snow" value={description} onChange={setDescription} style={{ marginBottom: 50, height: 300 }} />
 
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
-        {imagePreviews.map((img, index) => (
-          <Box key={index} sx={{ width: 100, height: 100, borderRadius: 2, overflow: "hidden" }}>
-            <img src={img} alt="preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
-          </Box>
-        ))}
-      </Box>
+      {/* Image Previews */}
+      {imagePreviews.length > 0 && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
+          {imagePreviews.map((src, index) => (
+            <Box key={index} sx={{ position: "relative", width: 100, height: 100 }}>
+              <img src={src} alt="Preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
+              <IconButton
+                sx={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.8)" }}
+                onClick={() => handleRemoveImage(index)}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
+          ))}
+        </Box>
+      )}
 
-      <input type="file" multiple onChange={handleFileChange} style={{ marginTop: 16 }} />
-      <Button variant="contained" color="primary" fullWidth sx={{ mt: 2 }} onClick={handleCreateEvent} disabled={loading}>
-        {loading ? "Creating..." : "Create Event"}
+      {/* File Input */}
+      <Button variant="contained" component="label" fullWidth sx={{ mt: 2 }}>
+        Select Images
+        <input type="file" multiple hidden onChange={handleFileChange} />
+      </Button>
+
+      {/* Submit Button */}
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
+        sx={{ mt: 2 }}
+        onClick={handleCreateEvent}
+        disabled={loading}
+      >
+        {loading ? <CircularProgress size={24} /> : "Create News"}
       </Button>
     </Box>
   );
