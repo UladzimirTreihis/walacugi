@@ -10,7 +10,6 @@ export default function AdminNewsForm() {
   const [description, setDescription] = useState("");
 
   const { post, loading, error } = useApi();
-  const token = localStorage.getItem("adminToken") || "";
 
   // Handle file selection and generate previews
   const handleFileChange = (e) => {
@@ -32,9 +31,7 @@ export default function AdminNewsForm() {
       const formData = new FormData();
       formData.append("images", file);
 
-      const res = await post("/upload/news-image", formData, {
-        "x-admin-token": token,
-      });
+      const res = await post("/upload/news-image", formData);
 
       if (!res || !res.filePaths) {
         console.error("Upload error:", res);
@@ -58,9 +55,7 @@ export default function AdminNewsForm() {
         images: filePaths,
       };
 
-      const result = await post("/news", newsBody, {
-        "x-admin-token": token,
-      });
+      const result = await post("/news", newsBody);
 
       if (!result) {
         console.error("Create news failed.");

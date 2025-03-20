@@ -11,8 +11,6 @@ export default function AdminEventsForm() {
   const [description, setDescription] = useState(""); // Store as HTML
 
   const { post, loading, error } = useApi();
-  const token = localStorage.getItem("adminToken") || "";
-  console.log("TOKEN FROM ADMIN", token)
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
@@ -27,7 +25,7 @@ export default function AdminEventsForm() {
     for (const file of selectedFiles) {
       const formData = new FormData();
       formData.append("images", file);
-      const res = await post("/upload/event-image", formData, { "x-admin-token": token });
+      const res = await post("/upload/event-image", formData);
       if (!res || !res.filePaths) {
         console.error("Upload error:", res);
         continue;
@@ -45,7 +43,7 @@ export default function AdminEventsForm() {
         description, // HTML format
         images: filePaths,
       };
-      const result = await post("/events", eventBody, { "x-admin-token": token });
+      const result = await post("/events", eventBody);
       if (!result) {
         console.error("Create event failed.");
         return;
