@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchNews } from "../store/newsSlice";
 import { Box, Container, Typography } from "@mui/material";
 import ImageGallery from "./shared/ImageGallery";
+import DOMPurify from "dompurify";
+
 
 export default function NewsFull() {
   const { newsId } = useParams();
@@ -43,11 +45,11 @@ export default function NewsFull() {
 
       {/* Description with proper paragraphs */}
       <Box sx={{ my: 4 }}>
-        {news.description.split("\n\n").map((paragraph, index) => (
-          <Typography key={index} variant="body1" paragraph>
-            {paragraph}
-          </Typography>
-        ))}
+        <Typography
+          variant="body1"
+          sx={{ mt: 2 }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.description) }} 
+        />
       </Box>
     </Container>
   );

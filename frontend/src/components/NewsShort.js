@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import useApi from "../hooks/useApi";
 import { useSelector, useDispatch } from "react-redux";
 import { deleteNews } from "../store/newsSlice";
-
+import DOMPurify from "dompurify";
+import getExcerpt from "../utils/getExcerpt";
 
 export default function NewsShort({ data, fullDescription }) {
   const { _id, images, title, description } = data;
@@ -56,13 +57,7 @@ export default function NewsShort({ data, fullDescription }) {
       <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <Typography variant="body2" sx={{ flexGrow: 1}}>
-          {fullDescription 
-          ? description.split("\n\n").map((paragraph, index) => (
-            <Typography key={index} variant="body2" paragraph >
-                {paragraph}
-            </Typography>
-          )) 
-          : description.slice(0, 100) + "..."}
+          {getExcerpt(description)}
           {isAdmin && (
             <>
               <Button

@@ -7,6 +7,8 @@ export function checkAdminToken(req, res, next) {
   // 🔹 Extract token from the Authorization header
   const token = req.headers["authorization"]?.split(" ")[1];
 
+  console.log("Token from back received: ", token)
+
   if (!token) {
     console.log("❌ No token provided!");
     return res.status(401).json({ error: "Unauthorized - No token provided" });
