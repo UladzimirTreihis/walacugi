@@ -1,10 +1,11 @@
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import data from "./data.json";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 import Main from "./components/Main";
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 import "./i18n";
 
 import { AuthProvider } from "./contexts/AuthProvider";
+import { createAppTheme } from "./theme";
 
 import Events from "./components/Events";
 import EventFull from "./components/EventFull";
@@ -20,13 +21,7 @@ import AdminLogin from "./components/admin/AdminLogin";
 import AdminEventsForm from "./components/admin/AdminEventsForm";
 import AdminEditEventForm from "./components/admin/AdminEditEventForm";
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#5F97CF"
-    }
-  }
-});
+const theme = createAppTheme("light");
 
 const router = createBrowserRouter([
   {
@@ -103,6 +98,7 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider theme={theme}>
+        <CssBaseline />
         <RouterProvider router={router} />
       </ThemeProvider>
     </AuthProvider>
