@@ -21,7 +21,7 @@ services:
     depends_on:
       - mongo
     environment:
-      DATABASE_URL: ${MONGO_URL}
+      MONGO_URL: ${MONGO_URL}
     volumes:
       - .:/app
       - /app/node_modules
