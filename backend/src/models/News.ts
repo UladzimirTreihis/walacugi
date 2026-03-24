@@ -1,0 +1,12 @@
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
+
+const newsSchema = new Schema({
+  title: { type: String, required: true },
+  images: [{ type: String }],
+  description: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+export type NewsDocument = InferSchemaType<typeof newsSchema>;
+
+export default mongoose.model("News", newsSchema);
