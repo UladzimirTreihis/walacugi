@@ -1,23 +1,16 @@
-# Use the official Node.js image as a base
-FROM node:18-alpine
-
-# Set the working directory inside the container
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy only package.json and package-lock.json first (optimizes caching)
 COPY package*.json ./
-
-# Install dependencies
-RUN npm install --only=production
-
-# Copy the rest of the backend application
+RUN npm ci
 COPY . .
+RUN npm run build
 
-# Expose the port your Express server runs on
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+COPY uploads ./uploads
 EXPOSE 4000
-
-# Set environment variables for production
 ENV NODE_ENV=production
-
-# Start the server
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

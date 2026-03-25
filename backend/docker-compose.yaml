@@ -21,7 +21,14 @@ services:
     depends_on:
       - mongo
     environment:
-      DATABASE_URL: ${MONGO_URL}
+      PORT: ${PORT}
+      MONGO_URL: ${MONGO_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
     volumes:
       - .:/app
       - /app/node_modules
