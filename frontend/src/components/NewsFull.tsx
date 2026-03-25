@@ -30,9 +30,9 @@ export default function NewsFull() {
   if (!news) return <Typography variant="h6">News not found</Typography>;
 
   return (
-    <Container>
+    <Container sx={{ py: 10 }}>
       <Box sx={{ display: "block", textAlign: "center" }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ my: 4, display: "block" }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 4, display: "block" }}>
           {news.title}
         </Typography>
 
@@ -41,7 +41,7 @@ export default function NewsFull() {
         </Box>
       </Box>
 
-      <Box sx={{ my: 4 }}>
+      <Box sx={{ my: 20 }}>
         <Typography
           variant="body1"
           sx={{ mt: 2 }}

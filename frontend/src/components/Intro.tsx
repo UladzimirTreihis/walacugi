@@ -16,7 +16,7 @@ function Intro() {
       sx={{
         position: "relative",
         // This container is as tall as you need:
-        minHeight: "1000px",  // or whatever makes sense for your large image
+        minHeight: "1050px",  // or whatever makes sense for your large image
         // The background image
         backgroundImage: 'url("/images/background.jpg")',
         backgroundSize: "cover",

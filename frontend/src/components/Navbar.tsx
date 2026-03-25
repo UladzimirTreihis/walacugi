@@ -27,9 +27,28 @@ function Navbar() {
         : ""
         }
 
-        <Box sx={{ display: "flex", gap: 0 }}>
-          <Button color="inherit" onClick={() => i18n.changeLanguage("pl")} sx={{ color: "#fff", minWidth: "auto", padding: "4px 0px 4px 8px", margin: 0 }}>Pl/</Button>
-          <Button color="inherit" onClick={() => i18n.changeLanguage("en")} sx={{ color: "#fff", minWidth: "auto", padding: "4px 0px", margin: 0 }}>En</Button>
+        <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+          <Button
+            color="inherit"
+            onClick={() => i18n.changeLanguage("pl")}
+            sx={{ color: "#fff", minWidth: "auto", px: 1, py: 0.5 }}
+          >
+            🇵🇱
+          </Button>
+          <Button
+            color="inherit"
+            onClick={() => i18n.changeLanguage("en")}
+            sx={{ color: "#fff", minWidth: "auto", px: 1, py: 0.5 }}
+          >
+            🇬🇧
+          </Button>
+          <Button
+            color="inherit"
+            onClick={() => i18n.changeLanguage("be")}
+            sx={{ color: "#fff", minWidth: "auto", px: 1, py: 0.5 }}
+          >
+            🇧🇾
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>

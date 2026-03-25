@@ -26,7 +26,7 @@ export default function News() {
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <Container>
+    <Container sx={{py: 10}}>
       <Typography variant="h4" gutterBottom align="center">
         {t("news")}
       </Typography>

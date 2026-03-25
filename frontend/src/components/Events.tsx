@@ -25,7 +25,7 @@ export default function Events() {
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <Container>
+    <Container sx={{ py: 10 }}>
       <Typography variant="h4" gutterBottom align="center">
         {t("events")}
       </Typography>
@@ -40,7 +40,16 @@ export default function Events() {
         }}
       >
         {events.map((evt, index) => (
-          <EventShort key={index} data={evt} />
+          <Box
+            key={index}
+            sx={{
+              flex: "1 1 calc(33% - 16px)",
+              minWidth: "250px",
+              display: "flex"
+            }}
+          >
+            <EventShort data={evt} />
+          </Box>
         ))}
       </Box>
     </Container>
