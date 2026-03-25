@@ -80,3 +80,13 @@ Mongo logs:
 cd backend
 docker compose logs -f mongo
 ```
+
+Admin password helper:
+
+```bash
+# From repo root
+bash scripts/update-admin-password.sh
+# Prompts for password, hashes with bcryptjs, escapes $, and updates backend/.env
+# Then recreate backend:
+cd backend && docker compose down && docker compose up -d --build
+```

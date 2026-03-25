@@ -27,7 +27,7 @@ export default function AdminLogin() {
 
   return (
     <div style={{ textAlign: "center" }}>
-      <h2>Enter Admin Token</h2>
+      <h2>Enter Admin Password</h2>
       {error && <p style={{ color: "red" }}>{error}</p>}
       <input
         type="password"
