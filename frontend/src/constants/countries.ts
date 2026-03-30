@@ -6,7 +6,7 @@ export interface CountryOption {
 
 export const COUNTRY_OPTIONS: CountryOption[] = [
   { code: "pl", name: "Poland", aliases: ["polska"] },
-  { code: "by", name: "Belarus", aliases: ["belorussia"] },
+  { code: "by", name: "Belarus"},
   { code: "lt", name: "Lithuania" },
   { code: "lv", name: "Latvia" },
   { code: "ee", name: "Estonia" },
