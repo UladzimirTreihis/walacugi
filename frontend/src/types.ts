@@ -18,6 +18,7 @@ export interface EventItem {
   description: string;
   budget?: string;
   currency?: string;
+  datedAt?: string;
   startDate?: string;
   endDate?: string;
   approxDate?: string;
@@ -27,4 +28,6 @@ export interface EventItem {
   chatLink?: string;
   difficultyLevel?: number;
   createdAt: string;
+  updatedAt?: string;
+  pinned?: boolean;
 }

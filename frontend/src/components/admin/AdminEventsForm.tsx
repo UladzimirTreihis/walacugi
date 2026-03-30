@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TextField, Button, Box, Typography, CircularProgress, Autocomplete } from "@mui/material";
+import { TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -29,12 +29,14 @@ export default function AdminEventsForm() {
   const [currency, setCurrency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [datedAt, setDatedAt] = useState("");
   const [approxDate, setApproxDate] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [ageRestriction, setAgeRestriction] = useState("");
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
+  const [pinned, setPinned] = useState(false);
 
   const { post, loading, error } = useApi();
 
@@ -71,6 +73,7 @@ export default function AdminEventsForm() {
         images: filePaths,
         budget,
         currency,
+        datedAt: displayDateToIso(datedAt) || undefined,
         startDate: startDateIso || undefined,
         endDate: endDateIso || undefined,
         approxDate,
@@ -78,7 +81,8 @@ export default function AdminEventsForm() {
         location,
         ageRestriction,
         chatLink,
-        difficultyLevel
+        difficultyLevel,
+        pinned
       };
       const result = await post("/events", eventBody);
       if (!result) return;
@@ -90,12 +94,14 @@ export default function AdminEventsForm() {
       setCurrency("");
       setStartDate("");
       setEndDate("");
+      setDatedAt("");
       setApproxDate("");
       setCountries([]);
       setLocation("");
       setAgeRestriction("");
       setChatLink("");
       setDifficultyLevel(3);
+      setPinned(false);
     } catch (error) {
       console.error("Error creating event:", error);
     }
@@ -122,8 +128,11 @@ export default function AdminEventsForm() {
   };
   const startDateIso = displayDateToIso(startDate);
   const endDateIso = displayDateToIso(endDate);
+  const datedAtIso = displayDateToIso(datedAt);
   const hasStartDateError = startDate.trim().length > 0 && !startDateIso;
   const hasEndDateError = endDate.trim().length > 0 && !endDateIso;
+  const hasDatedAtError = datedAt.trim().length > 0 && !datedAtIso;
+  const isDateRequirementUnmet = !(startDateIso || datedAtIso);
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
@@ -149,16 +158,26 @@ export default function AdminEventsForm() {
           InputLabelProps={{ shrink: true }}
         />
         <TextField
-          label="End date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          label="Dated at (sorting date)"
+          value={datedAt}
+          onChange={(e) => setDatedAt(e.target.value)}
           margin="normal"
           placeholder="dd-mm-yyyy"
-          error={hasEndDateError}
-          helperText={hasEndDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
+          error={hasDatedAtError}
+          helperText={hasDatedAtError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
           InputLabelProps={{ shrink: true }}
         />
       </Box>
+      <TextField
+        label="End date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        margin="normal"
+        placeholder="dd-mm-yyyy"
+        error={hasEndDateError}
+        helperText={hasEndDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
+        InputLabelProps={{ shrink: true }}
+      />
       <TextField
         fullWidth
         label="Approx date (if exact dates unknown)"
@@ -191,6 +210,10 @@ export default function AdminEventsForm() {
         value={ageRestriction}
         onChange={(e) => setAgeRestriction(e.target.value)}
         margin="normal"
+      />
+      <FormControlLabel
+        control={<Switch checked={pinned} onChange={(e) => setPinned(e.target.checked)} />}
+        label="Pin (pinned show first; ordered by last update)"
       />
       <TextField fullWidth label="Planning chat link" value={chatLink} onChange={(e) => setChatLink(e.target.value)} margin="normal" />
       <TextField
@@ -230,7 +253,7 @@ export default function AdminEventsForm() {
         fullWidth
         sx={{ mt: 2 }}
         onClick={handleCreateEvent}
-        disabled={loading || hasStartDateError || hasEndDateError}
+        disabled={loading || hasStartDateError || hasEndDateError || hasDatedAtError || isDateRequirementUnmet}
       >
         {loading ? <CircularProgress size={24} /> : "Create Event"}
       </Button>

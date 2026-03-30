@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { TextField, Button, Box, Typography, CircularProgress, Autocomplete } from "@mui/material";
+import { TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import SortableImageList from "./SortableImageList";
@@ -42,12 +42,14 @@ export default function AdminEditEventForm() {
   const [currency, setCurrency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [datedAt, setDatedAt] = useState("");
   const [approxDate, setApproxDate] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [ageRestriction, setAgeRestriction] = useState("");
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
+  const [pinned, setPinned] = useState(false);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
@@ -66,6 +68,7 @@ export default function AdminEditEventForm() {
           setCurrency(data.currency || "");
           setStartDate(data.startDate ? isoDateToDisplay(String(data.startDate).slice(0, 10)) : "");
           setEndDate(data.endDate ? isoDateToDisplay(String(data.endDate).slice(0, 10)) : "");
+          setDatedAt(data.datedAt ? isoDateToDisplay(String(data.datedAt).slice(0, 10)) : "");
           setApproxDate(data.approxDate || "");
           setCountries(data.countries || []);
           setLocation(data.location || "");
@@ -73,6 +76,7 @@ export default function AdminEditEventForm() {
           setChatLink(data.chatLink || "");
           setDifficultyLevel(data.difficultyLevel || 3);
           setExistingImages(data.images || []);
+          setPinned(Boolean(data.pinned));
         }
       })
       .catch((err) => console.error("Failed to fetch event:", err));
@@ -109,6 +113,7 @@ export default function AdminEditEventForm() {
       const uploadedImages = await handleUpload();
       const startDateIso = displayDateToIso(startDate);
       const endDateIso = displayDateToIso(endDate);
+      const datedAtIso = displayDateToIso(datedAt);
       const updatedEvent = {
         title,
         description,
@@ -116,12 +121,14 @@ export default function AdminEditEventForm() {
         currency,
         startDate: startDateIso || undefined,
         endDate: endDateIso || undefined,
+        datedAt: datedAtIso || undefined,
         approxDate,
         countries,
         location,
         ageRestriction,
         chatLink,
         difficultyLevel,
+        pinned,
         images: [...existingImages, ...uploadedImages],
       };
       const result = await put(`/events/${eventId}`, updatedEvent, {
@@ -169,6 +176,8 @@ export default function AdminEditEventForm() {
   }
   const hasStartDateError = startDate.trim().length > 0 && !displayDateToIso(startDate);
   const hasEndDateError = endDate.trim().length > 0 && !displayDateToIso(endDate);
+  const hasDatedAtError = datedAt.trim().length > 0 && !displayDateToIso(datedAt);
+  const isDateRequirementUnmet = !(displayDateToIso(startDate) || displayDateToIso(datedAt));
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
@@ -197,16 +206,26 @@ export default function AdminEditEventForm() {
           InputLabelProps={{ shrink: true }}
         />
         <TextField
-          label="End date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          label="Dated at (sorting date)"
+          value={datedAt}
+          onChange={(e) => setDatedAt(e.target.value)}
           margin="normal"
           placeholder="dd-mm-yyyy"
-          error={hasEndDateError}
-          helperText={hasEndDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
+          error={hasDatedAtError}
+          helperText={hasDatedAtError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
           InputLabelProps={{ shrink: true }}
         />
       </Box>
+      <TextField
+        label="End date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        margin="normal"
+        placeholder="dd-mm-yyyy"
+        error={hasEndDateError}
+        helperText={hasEndDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
+        InputLabelProps={{ shrink: true }}
+      />
       <TextField
         fullWidth
         label="Approx date (if exact dates unknown)"
@@ -239,6 +258,10 @@ export default function AdminEditEventForm() {
         value={ageRestriction}
         onChange={(e) => setAgeRestriction(e.target.value)}
         margin="normal"
+      />
+      <FormControlLabel
+        control={<Switch checked={pinned} onChange={(e) => setPinned(e.target.checked)} />}
+        label="Pin (pinned show first; ordered by last update)"
       />
       <TextField fullWidth label="Planning chat link" value={chatLink} onChange={(e) => setChatLink(e.target.value)} margin="normal" />
       <TextField
@@ -280,7 +303,7 @@ export default function AdminEditEventForm() {
         fullWidth
         sx={{ mt: 2 }}
         onClick={handleUpdateEvent}
-        disabled={loading || hasStartDateError || hasEndDateError}
+        disabled={loading || hasStartDateError || hasEndDateError || hasDatedAtError || isDateRequirementUnmet}
       >
         {loading ? "Updating..." : "Update Event"}
       </Button>

@@ -7,7 +7,35 @@ const router = Router();
 
 router.get("/", async (_req: Request, res: Response) => {
   try {
-    const events = await Event.find().sort({ createdAt: -1 });
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    // Sorting:
+    // 1) pinned first
+    // 2) among pinned: by updatedAt desc
+    // 3) others: by effectiveDate desc, where effectiveDate = datedAt || startDate
+    const events = await Event.aggregate([
+      {
+        $addFields: {
+          sortPinned: { $cond: [{ $eq: ["$pinned", true] }, 1, 0] },
+          sortPinnedUpdatedAt: {
+            $cond: [{ $eq: ["$pinned", true] }, "$updatedAt", new Date(0)]
+          },
+          sortEffectiveDate: { $ifNull: ["$datedAt", "$startDate"] }
+        }
+      },
+      {
+        $match: {
+          sortEffectiveDate: { $gte: twoWeeksAgo }
+        }
+      },
+      {
+        $sort: {
+          sortPinned: -1,
+          sortPinnedUpdatedAt: -1,
+          sortEffectiveDate: -1,
+          createdAt: -1
+        }
+      }
+    ]);
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -29,7 +57,8 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 router.post("/", checkAdminToken, async (req: Request, res: Response) => {
   try {
-    const newEvent = new Event(req.body);
+    const body = { ...req.body, updatedAt: new Date() };
+    const newEvent = new Event(body);
     const saved = await newEvent.save();
     res.json(saved);
   } catch (err) {
@@ -39,7 +68,8 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
 
 router.put("/:id", checkAdminToken, async (req: Request, res: Response) => {
   try {
-    const updated = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const payload = { ...req.body, updatedAt: new Date() };
+    const updated = await Event.findByIdAndUpdate(req.params.id, payload, { new: true });
     if (!updated) {
       res.status(404).json({ error: "Not found" });
       return;

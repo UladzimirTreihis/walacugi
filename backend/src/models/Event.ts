@@ -6,6 +6,7 @@ const eventSchema = new Schema({
   description: { type: String, default: "" },
   budget: { type: String, default: "" },
   currency: { type: String, default: "" },
+  datedAt: { type: Date },
   startDate: { type: Date },
   endDate: { type: Date },
   approxDate: { type: String, default: "" },
@@ -14,7 +15,9 @@ const eventSchema = new Schema({
   ageRestriction: { type: String, default: "" },
   chatLink: { type: String, default: "" },
   difficultyLevel: { type: Number, min: 1, max: 5 },
-  createdAt: { type: Date, default: Date.now }
+  pinned: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 export type EventDocument = InferSchemaType<typeof eventSchema>;

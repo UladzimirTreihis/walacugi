@@ -80,12 +80,12 @@ export default function NewsShort({ data }: { data: NewsItem }) {
                   color="primary"
                   variant="outlined"
                   size="small"
-                  sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
+                  sx={{ bgcolor: "rgba(255,255,255,0.85) !important" }}
                 />
               );
             })}
             {datedTag && (
-              <Chip label={`🗓️ ${datedTag}`} color="secondary" variant="outlined" size="small" sx={{ bgcolor: "rgba(255,255,255,0.85)" }} />
+              <Chip label={`🗓️ ${datedTag}`} color="primary" variant="outlined" size="small" sx={{ bgcolor: "rgba(255,255,255,0.85) !important" }} />
             )}
           </Stack>
         </Box>
