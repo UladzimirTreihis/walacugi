@@ -47,14 +47,13 @@ function Intro() {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          Walacugi
+          Poznaj Świat
         </Typography>
         <Typography variant="body1">
           {t("welcome")}
         </Typography>
       </Box>
     </Box>
-      
     </Box>
   );
 }

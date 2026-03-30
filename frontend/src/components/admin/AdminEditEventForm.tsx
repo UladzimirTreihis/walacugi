@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { TextField, Button, Box, Typography, CircularProgress, IconButton, Autocomplete } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { TextField, Button, Box, Typography, CircularProgress, Autocomplete } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
+import SortableImageList from "./SortableImageList";
 import {
   COUNTRY_BY_CODE,
   COUNTRY_OPTIONS,
@@ -139,6 +139,34 @@ export default function AdminEditEventForm() {
   function handleDeleteImage(index: number) {
     setExistingImages((prevImages) => prevImages.filter((_, i) => i !== index));
   }
+  function handleMoveExistingImage(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= existingImages.length) return;
+    setExistingImages((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+  function handleDeleteNewImage(index: number) {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+  function handleMoveNewImage(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= newFiles.length) return;
+    setNewFiles((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    setNewImagePreviews((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
   const hasStartDateError = startDate.trim().length > 0 && !displayDateToIso(startDate);
   const hasEndDateError = endDate.trim().length > 0 && !displayDateToIso(endDate);
 
@@ -227,27 +255,22 @@ export default function AdminEditEventForm() {
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
         Existing Images:
       </Typography>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 1 }}>
-        {existingImages.map((img, index) => (
-          <Box key={index} sx={{ position: "relative", width: 100, height: 100, borderRadius: 2, overflow: "hidden" }}>
-            <img src={img} alt="event" width="100%" height="100%" style={{ objectFit: "cover" }} />
-            <IconButton sx={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.8)" }} onClick={() => handleDeleteImage(index)}>
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        ))}
-      </Box>
+      <SortableImageList
+        images={existingImages}
+        onMove={handleMoveExistingImage}
+        onRemove={handleDeleteImage}
+        imageAlt="Existing event image"
+      />
 
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
         New Images:
       </Typography>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 1 }}>
-        {newImagePreviews.map((preview, index) => (
-          <Box key={index} sx={{ width: 100, height: 100, borderRadius: 2, overflow: "hidden" }}>
-            <img src={preview} alt="preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
-          </Box>
-        ))}
-      </Box>
+      <SortableImageList
+        images={newImagePreviews}
+        onMove={handleMoveNewImage}
+        onRemove={handleDeleteNewImage}
+        imageAlt="New event image"
+      />
 
       <input type="file" multiple onChange={handleFileChange} style={{ marginTop: 16 }} />
 

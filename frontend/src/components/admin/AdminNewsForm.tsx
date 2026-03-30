@@ -7,14 +7,13 @@ import {
   TextField,
   Typography,
   CircularProgress,
-  IconButton,
   Autocomplete
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { COUNTRY_OPTIONS, COUNTRY_BY_CODE, countryMatchesQuery, getFlagEmoji } from "../../constants/countries";
+import SortableImageList from "./SortableImageList";
 
 function displayDateToIso(value: string): string {
   const trimmed = value.trim();
@@ -90,6 +89,21 @@ export default function AdminNewsForm() {
     setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
     setImagePreviews((prevPreviews) => prevPreviews.filter((_, i) => i !== index));
   };
+  const handleMoveImage = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= selectedFiles.length) return;
+    setSelectedFiles((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    setImagePreviews((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
   const datedAtIso = displayDateToIso(datedAt);
   const hasDatedAtError = datedAt.trim().length > 0 && !datedAtIso;
 
@@ -137,16 +151,17 @@ export default function AdminNewsForm() {
       <Typography variant="h6" gutterBottom>Description</Typography>
       <ReactQuill theme="snow" value={description} onChange={setDescription as any} style={{ marginBottom: 50, height: 300 }} />
       {imagePreviews.length > 0 && (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
-          {imagePreviews.map((src, index) => (
-            <Box key={index} sx={{ position: "relative", width: 100, height: 100 }}>
-              <img src={src} alt="Preview" width="100%" height="100%" style={{ objectFit: "cover" }} />
-              <IconButton sx={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.8)" }} onClick={() => handleRemoveImage(index)}>
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-        </Box>
+        <>
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>
+            Arrange selected images (left to right):
+          </Typography>
+          <SortableImageList
+            images={imagePreviews}
+            onMove={handleMoveImage}
+            onRemove={handleRemoveImage}
+            imageAlt="News preview"
+          />
+        </>
       )}
       <Button variant="contained" component="label" fullWidth sx={{ mt: 2 }}>
         Select Images
