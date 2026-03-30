@@ -3,7 +3,12 @@ export interface NewsItem {
   title: string;
   images: string[];
   description: string;
+  datedAt?: string;
+  pinned?: boolean;
+  location?: string;
+  countries?: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface EventItem {
@@ -21,6 +26,5 @@ export interface EventItem {
   ageRestriction?: string;
   chatLink?: string;
   difficultyLevel?: number;
-  date?: string;
   createdAt: string;
 }

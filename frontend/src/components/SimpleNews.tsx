@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { Card, CardMedia, CardContent, Typography, Button } from "@mui/material";
+import React from "react";
+import { Card, CardMedia, CardContent, Button, Box, Chip, Stack } from "@mui/material";
 import { Link } from "react-router-dom";
 import useApi from "../hooks/useApi";
 import { useSelector, useDispatch } from "react-redux";
 import { deleteNews } from "../store/newsSlice";
 import type { RootState } from "../store/store";
 import type { NewsItem } from "../types";
+import formatDateEU from "../utils/formatDateEU";
+import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
+import ClampedTitle from "./shared/ClampedTitle";
 
 export default function SimpleNews({ data }: { data: NewsItem }) {
   const { _id, images, title } = data;
-  const [isPortrait, setIsPortrait] = useState(false);
   const adminToken = useSelector((state: RootState) => state.auth.token); 
   const isAdmin = !!adminToken
   const { del } = useApi();
@@ -26,15 +28,9 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
       dispatch(deleteNews(newsId));
     }
   };
-  const firstImage = images[0]
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = firstImage;
-    img.onload = () => {
-      setIsPortrait(img.height > img.width);
-    };
-  }, [firstImage]);
+  const datedTag = formatDateEU(data.datedAt);
+  const hasOverlayTags =
+    !!data.location || (data.countries && data.countries.length > 0) || !!datedTag;
 
   return (
     <Card
@@ -44,7 +40,10 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
         textDecoration: "none",
         borderRadius: 2, 
         boxShadow: 2, 
-        display: "block", 
+        display: "flex",
+        flexDirection: "column",
+        // Fixed, stable height (matches the "event card" feel)
+        height: 420,
         overflow: "hidden",
         transition: "box-shadow 0.3s ease, transform 0.2s ease",
         "&:hover": {
@@ -54,40 +53,114 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
         },
       }}
     >
-      <CardMedia component="img" image={images[0]} alt={title} sx={{ 
-        height: isPortrait ? "auto" : 300,
-        maxHeight: 400,
-        objectFit: isPortrait ? "contain" : "cover",
-        justifyContent: "start"
-        }} />
-      <CardContent>
-        <Typography variant="body1" sx={{ fontWeight: "bold" }}>{title}</Typography>
-      </CardContent>
-      {isAdmin && (
-            <>
-              <Button
-                variant="outlined"
-                color="primary"
-                component={Link}
-                to={`/admin/news/edit/${data._id}`}
-                sx={{ mt: 1 }}
-              >
-                Edit
-              </Button>
-              <Button
+      <Box
+        sx={{
+          position: "relative",
+          // take all remaining space but allow the content area to stay visible
+          flex: "1 1 0px",
+          minHeight: 0
+        }}
+      >
+        <CardMedia
+          component="img"
+          image={images?.[0] || "/images/logo_white.jpg"}
+          alt={title}
+          sx={{
+            height: "100%",
+            width: "100%",
+            objectFit: "cover"
+          }}
+        />
+        {data.pinned && (
+          <Box sx={{ position: "absolute", top: 12, right: 12, zIndex: 3 }}>
+            <Chip
+              label="📌 Pinned"
+              color="warning"
+              size="small"
+              sx={{ bgcolor: "rgba(255,255,255,0.92)", fontWeight: 700 }}
+            />
+          </Box>
+        )}
+        {hasOverlayTags && (
+          <Box sx={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 2 }}>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ justifyContent: "center" }}>
+              {data.location && (
+                <Chip
+                  label={`📍 ${data.location}`}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
+                />
+              )}
+              {data.countries?.map((code) => {
+                const meta = COUNTRY_BY_CODE[code];
+                const name = meta?.name ?? code.toUpperCase();
+                return (
+                  <Chip
+                    key={code}
+                    label={`${getFlagEmoji(code)} ${name}`}
+                    color="primary"
+                    variant="outlined"
+                    size="small"
+                    sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
+                  />
+                );
+              })}
+              {datedTag && (
+                <Chip
+                  label={`🗓️ ${datedTag}`}
+                  color="secondary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
+                />
+              )}
+            </Stack>
+          </Box>
+        )}
+      </Box>
+      <CardContent
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          // lock a consistent title area (2 lines) like EventShort
+          pt: 1.5,
+          pb: 2,
+          flexShrink: 0
+        }}
+      >
+        <ClampedTitle text={title} lines={2} />
+        {isAdmin && (
+          <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              component={Link}
+              to={`/admin/news/edit/${data._id}`}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
+              Edit
+            </Button>
+            <Button
               variant="outlined"
               color="error"
-              sx={{ mt: 1, ml: 2 }}
+              size="small"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 handleDeleteNews(data._id);
               }}
-              >
+            >
               Delete
             </Button>
-          </>
-          )}
+          </Box>
+        )}
+      </CardContent>
     </Card>
   );
 }

@@ -4,7 +4,12 @@ const newsSchema = new Schema({
   title: { type: String, required: true },
   images: [{ type: String }],
   description: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now }
+  datedAt: { type: Date, default: Date.now },
+  pinned: { type: Boolean, default: false },
+  location: { type: String, default: "" },
+  countries: [{ type: String }],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 export type NewsDocument = InferSchemaType<typeof newsSchema>;
