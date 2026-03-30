@@ -7,6 +7,7 @@ import { fetchEvents } from "../store/eventsSlice";
 import DOMPurify from "dompurify";
 import type { RootState } from "../store/store";
 import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
+import formatDateEU from "../utils/formatDateEU";
 import { useTranslation } from "react-i18next";
 
 export default function EventFull() {
@@ -31,7 +32,7 @@ export default function EventFull() {
 
   const dateRange =
     event.startDate && event.endDate
-      ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+      ? `${formatDateEU(event.startDate)} - ${formatDateEU(event.endDate)}`
       : null;
 
   const hasMeta =

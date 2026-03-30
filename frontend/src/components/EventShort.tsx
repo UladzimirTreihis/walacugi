@@ -14,6 +14,7 @@ import ClampedHtml from "./shared/ClampedHtml";
 import { Box, Chip, Stack } from "@mui/material";
 import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
 import { useTranslation } from "react-i18next";
+import formatDateEU from "../utils/formatDateEU";
 
 export default function EventShort({ data }: { data: EventItem }) {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function EventShort({ data }: { data: EventItem }) {
 
   const dateTag =
     data.startDate && data.endDate
-      ? `${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()}`
+      ? `${formatDateEU(data.startDate)} - ${formatDateEU(data.endDate)}`
       : data.approxDate || null;
 
   const hasOverlayTags =

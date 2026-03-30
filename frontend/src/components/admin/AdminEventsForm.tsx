@@ -11,6 +11,15 @@ import {
   getFlagEmoji
 } from "../../constants/countries";
 
+function displayDateToIso(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
+  if (!match) return "";
+  const [, dd, mm, yyyy] = match;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -54,14 +63,16 @@ export default function AdminEventsForm() {
   async function handleCreateEvent() {
     try {
       const filePaths = await handleUpload();
+      const startDateIso = displayDateToIso(startDate);
+      const endDateIso = displayDateToIso(endDate);
       const eventBody = {
         title,
         description,
         images: filePaths,
         budget,
         currency,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        startDate: startDateIso || undefined,
+        endDate: endDateIso || undefined,
         approxDate,
         countries,
         location,
@@ -94,6 +105,10 @@ export default function AdminEventsForm() {
     setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
     setImagePreviews((prevPreviews) => prevPreviews.filter((_, i) => i !== index));
   };
+  const startDateIso = displayDateToIso(startDate);
+  const endDateIso = displayDateToIso(endDate);
+  const hasStartDateError = startDate.trim().length > 0 && !startDateIso;
+  const hasEndDateError = endDate.trim().length > 0 && !endDateIso;
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
@@ -109,19 +124,23 @@ export default function AdminEventsForm() {
       </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
         <TextField
-          type="date"
           label="Start date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           margin="normal"
+          placeholder="dd-mm-yyyy"
+          error={hasStartDateError}
+          helperText={hasStartDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
           InputLabelProps={{ shrink: true }}
         />
         <TextField
-          type="date"
           label="End date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           margin="normal"
+          placeholder="dd-mm-yyyy"
+          error={hasEndDateError}
+          helperText={hasEndDateError ? "Use dd-mm-yyyy format" : "dd-mm-yyyy"}
           InputLabelProps={{ shrink: true }}
         />
       </Box>
@@ -198,7 +217,7 @@ export default function AdminEventsForm() {
         fullWidth
         sx={{ mt: 2 }}
         onClick={handleCreateEvent}
-        disabled={loading}
+        disabled={loading || hasStartDateError || hasEndDateError}
       >
         {loading ? <CircularProgress size={24} /> : "Create Event"}
       </Button>

@@ -14,7 +14,6 @@ const eventSchema = new Schema({
   ageRestriction: { type: String, default: "" },
   chatLink: { type: String, default: "" },
   difficultyLevel: { type: Number, min: 1, max: 5 },
-  date: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 
