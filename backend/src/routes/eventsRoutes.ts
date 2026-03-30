@@ -31,7 +31,7 @@ router.get("/", async (_req: Request, res: Response) => {
         $sort: {
           sortPinned: -1,
           sortPinnedUpdatedAt: -1,
-          sortEffectiveDate: -1,
+          sortEffectiveDate: 1,
           createdAt: -1
         }
       }
