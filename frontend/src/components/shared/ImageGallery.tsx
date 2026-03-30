@@ -26,7 +26,7 @@ export default function ImageGallery({ images }: { images: string[] }) {
   }, [isOpen]);
 
   return (
-    <Box sx={{ width: "80%", mb: 4, maxHeight: "500px"}}>
+    <Box sx={{ width: "80%", mb: 4, maxHeight: "500px", overflow: "hidden" }}>
       <Box
         sx={{
           display: "flex",
@@ -42,30 +42,46 @@ export default function ImageGallery({ images }: { images: string[] }) {
             maxHeight: "200px",
             cursor: "pointer",
             filter: "brightness(50%)",
-            "&:hover": { filter: "brightness(70%)" },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "&:hover": { filter: "brightness(70%)" }
           }}
           onClick={() => setIsOpen(true)}
         >
           <img
             src={images[prevIndex]}
             alt="Previous"
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              borderRadius: "8px"
+            }}
           />
         </Box>
  
         <Box
           sx={{
             flex: "0 1 500px",
-            maxHeight: "350px",
+            maxHeight: "400px",
             cursor: "pointer",
-            "&:hover": { transform: "scale(1.02)" },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "&:hover": { transform: "scale(1.02)" }
           }}
           onClick={() => setIsOpen(true)}
         >
           <img
             src={images[currentIndex]}
             alt="Gallery"
-            style={{ width: "100%", height: "400px", objectFit: "contain", borderRadius: "8px" }}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              borderRadius: "8px"
+            }}
           />
         </Box>
  
@@ -75,14 +91,22 @@ export default function ImageGallery({ images }: { images: string[] }) {
             maxHeight: "200px",
             cursor: "pointer",
             filter: "brightness(50%)",
-            "&:hover": { filter: "brightness(70%)" },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            "&:hover": { filter: "brightness(70%)" }
           }}
           onClick={() => setIsOpen(true)}
         >
           <img
             src={images[nextIndex]}
             alt="Next"
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              borderRadius: "8px"
+            }}
           />
         </Box>
       </Box>
