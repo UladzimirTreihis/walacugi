@@ -33,6 +33,9 @@ export default function AdminNavbar() {
         <Button variant="contained" color="secondary" component={Link} to="/admin/events/create">
           Add Event
         </Button>
+        <Button variant="contained" color="secondary" component={Link} to="/admin/equipment/create">
+          Add Equipment
+        </Button>
         <Button variant="contained" color="secondary" component={Link} to="/">
           Main
         </Button>

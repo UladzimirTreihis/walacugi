@@ -20,6 +20,11 @@ import ProtectedRoute from "./components/admin/ProtectedRoute";
 import AdminLogin from "./components/admin/AdminLogin";
 import AdminEventsForm from "./components/admin/AdminEventsForm";
 import AdminEditEventForm from "./components/admin/AdminEditEventForm";
+import AdminEquipmentForm from "./components/admin/AdminEquipmentForm";
+import AdminEditEquipmentForm from "./components/admin/AdminEditEquipmentForm";
+import Equipment from "./components/Equipment";
+import EquipmentDetail from "./components/EquipmentDetail";
+import Checkout from "./components/Checkout";
 
 const theme = createAppTheme("light");
 
@@ -55,6 +60,14 @@ const router = createBrowserRouter([
           {
             path: "/admin/events/create",
             element: <AdminEventsForm />
+          },
+          {
+            path: "/admin/equipment/create",
+            element: <AdminEquipmentForm />
+          },
+          {
+            path: "/admin/equipment/edit/:modelId",
+            element: <AdminEditEquipmentForm />
           }
         ]
       }
@@ -85,6 +98,30 @@ const router = createBrowserRouter([
       {
         path: "/news/:newsId",
         element: <NewsFull />
+      }
+    ]
+  },
+  {
+    path: "/equipment",
+    element: <Root />,
+    children: [
+      {
+        path: "/equipment",
+        element: <Equipment />
+      },
+      {
+        path: "/equipment/:modelId",
+        element: <EquipmentDetail />
+      }
+    ]
+  },
+  {
+    path: "/checkout",
+    element: <Root />,
+    children: [
+      {
+        path: "/checkout",
+        element: <Checkout />
       }
     ]
   },

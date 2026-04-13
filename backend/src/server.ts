@@ -7,6 +7,8 @@ import newsRoutes from "./routes/newsRoutes.js";
 import eventsRoutes from "./routes/eventsRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import equipmentRoutes from "./routes/equipmentRoutes.js";
+import reservationRoutes from "./routes/reservationRoutes.js";
 
 dotenv.config();
 
@@ -34,6 +36,8 @@ app.use("/api/news", newsRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/equipment", equipmentRoutes);
+app.use("/api/reservations", reservationRoutes);
 app.use("/uploads", express.static("uploads"));
 
 app.listen(PORT, () => {

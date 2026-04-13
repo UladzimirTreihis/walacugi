@@ -22,7 +22,7 @@ const getPublicUrl = (key: string): string => {
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 };
 
-const uploadImages = async (files: Express.Multer.File[], folder: "news" | "events"): Promise<string[]> => {
+const uploadImages = async (files: Express.Multer.File[], folder: "news" | "events" | "equipment"): Promise<string[]> => {
   const bucket = process.env.AWS_S3_BUCKET;
   if (!bucket) {
     throw new Error("Missing AWS_S3_BUCKET");
@@ -67,6 +67,20 @@ router.post("/event-image", checkAdminToken, upload.array("images", 10), async (
 
   try {
     const filePaths = await uploadImages(req.files as Express.Multer.File[], "events");
+    res.json({ filePaths });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+router.post("/equipment-image", checkAdminToken, upload.array("images", 10), async (req: Request, res: Response) => {
+  if (!req.files || req.files.length === 0) {
+    res.status(400).json({ error: "No files uploaded" });
+    return;
+  }
+
+  try {
+    const filePaths = await uploadImages(req.files as Express.Multer.File[], "equipment");
     res.json({ filePaths });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });

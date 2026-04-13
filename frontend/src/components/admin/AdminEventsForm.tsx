@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -10,15 +10,9 @@ import {
   countryMatchesQuery,
   getFlagEmoji
 } from "../../constants/countries";
-
-function displayDateToIso(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
-  if (!match) return "";
-  const [, dd, mm, yyyy] = match;
-  return `${yyyy}-${mm}-${dd}`;
-}
+import { displayDateToIso } from "../../utils/dateDisplay";
+import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
+import { uploadFiles } from "../../utils/uploadFiles";
 
 export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -37,6 +31,7 @@ export default function AdminEventsForm() {
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
   const [pinned, setPinned] = useState(false);
+  const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   const { post, loading, error } = useApi();
 
@@ -47,24 +42,10 @@ export default function AdminEventsForm() {
     setImagePreviews(previews);
   };
 
-  async function handleUpload(): Promise<string[]> {
-    if (selectedFiles.length === 0) return [];
-    const uploadedFilePaths: string[] = [];
-
-    for (const file of selectedFiles) {
-      const formData = new FormData();
-      formData.append("images", file);
-      const res = await post<{ filePaths: string[] }>("/upload/event-image", formData);
-      if (res?.filePaths) {
-        uploadedFilePaths.push(...res.filePaths);
-      }
-    }
-    return uploadedFilePaths;
-  }
-
   async function handleCreateEvent() {
+    setFeedback(null);
     try {
-      const filePaths = await handleUpload();
+      const filePaths = await uploadFiles(selectedFiles, "/upload/event-image", post);
       const startDateIso = displayDateToIso(startDate);
       const endDateIso = displayDateToIso(endDate);
       const eventBody = {
@@ -85,7 +66,13 @@ export default function AdminEventsForm() {
         pinned
       };
       const result = await post("/events", eventBody);
-      if (!result) return;
+      if (!result) {
+        setFeedback({
+          severity: "error",
+          message: "We could not create this event. Please check the form and try again."
+        });
+        return;
+      }
       setSelectedFiles([]);
       setImagePreviews([]);
       setTitle("");
@@ -102,8 +89,13 @@ export default function AdminEventsForm() {
       setChatLink("");
       setDifficultyLevel(3);
       setPinned(false);
+      setFeedback({ severity: "success", message: "Event created successfully." });
     } catch (error) {
       console.error("Error creating event:", error);
+      setFeedback({
+        severity: "error",
+        message: "Something went wrong while creating the event. Please try again."
+      });
     }
   }
 
@@ -138,7 +130,16 @@ export default function AdminEventsForm() {
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>Create Event</Typography>
       {loading && <CircularProgress />}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {DEFAULT_REQUEST_ERROR_MESSAGE}
+        </Alert>
+      )}
+      {feedback && (
+        <Alert severity={feedback.severity} sx={{ mb: 2 }}>
+          {feedback.message}
+        </Alert>
+      )}
 
       <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
       <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} margin="normal" />
