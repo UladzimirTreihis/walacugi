@@ -22,6 +22,7 @@ import AdminEventsForm from "./components/admin/AdminEventsForm";
 import AdminEditEventForm from "./components/admin/AdminEditEventForm";
 import AdminEquipmentForm from "./components/admin/AdminEquipmentForm";
 import AdminEditEquipmentForm from "./components/admin/AdminEditEquipmentForm";
+import AdminCategoriesPage from "./components/admin/AdminCategoriesPage";
 import Equipment from "./components/Equipment";
 import EquipmentDetail from "./components/EquipmentDetail";
 import Cart from "./components/Cart";
@@ -69,6 +70,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/equipment/edit/:modelId",
             element: <AdminEditEquipmentForm />
+          },
+          {
+            path: "/admin/categories",
+            element: <AdminCategoriesPage />
           }
         ]
       }

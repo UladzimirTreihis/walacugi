@@ -68,7 +68,7 @@ export default function NewsShort({ data }: { data: NewsItem }) {
         <Box sx={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 2 }}>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ justifyContent: "center" }}>
             {data.location && (
-              <Chip label={`📍 ${data.location}`} color="primary" variant="outlined" size="small" sx={{ bgcolor: "rgba(255,255,255,0.85)" }} />
+              <Chip label={`📍 ${data.location}`} color="primary" variant="outlined" size="small" sx={{ bgcolor: "rgba(255,255,255,0.85) !important" }} />
             )}
             {data.countries?.map((code) => {
               const meta = COUNTRY_BY_CODE[code];

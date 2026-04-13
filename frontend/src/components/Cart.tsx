@@ -121,7 +121,7 @@ export default function Cart() {
   };
 
   return (
-    <Container sx={{ py: 8 }}>
+    <Container sx={{ py: 10 }}>
       <Box sx={{ mb: 2 }}>
         <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
           {t("cart.check_link")}

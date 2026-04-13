@@ -6,16 +6,243 @@ import EquipmentModel from "../models/EquipmentModel.js";
 import EquipmentUnit from "../models/EquipmentUnit.js";
 import Reservation from "../models/Reservation.js";
 import UnitBlock from "../models/UnitBlock.js";
+import Category from "../models/Category.js";
 import { checkAdminToken } from "../utils/middleware.js";
 import { isValidDateRange, rangesOverlap } from "../utils/bookingValidation.js";
 import { logger } from "../utils/logger.js";
 
 const router = Router();
 
-router.get("/", async (_req: Request, res: Response) => {
+type PopulatedCategory = { _id: mongoose.Types.ObjectId; name: string };
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toEquipmentModelDto(doc: {
+  _id: mongoose.Types.ObjectId;
+  category?: string;
+  categories?: PopulatedCategory[] | mongoose.Types.ObjectId[];
+  title: string;
+  description: string;
+  pricePerDay: number;
+  currency?: string;
+  size?: string;
+  images: string[];
+  active: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+}) {
+  const rawCats = doc.categories;
+  const cats: { _id: string; name: string }[] = [];
+  if (Array.isArray(rawCats)) {
+    for (const c of rawCats) {
+      if (c && typeof c === "object" && "name" in c && typeof (c as PopulatedCategory).name === "string") {
+        cats.push({ _id: String((c as PopulatedCategory)._id), name: (c as PopulatedCategory).name });
+      }
+    }
+  }
+  const categoryDisplay = cats.length > 0 ? cats.map((c) => c.name).join(", ") : (doc.category ?? "");
+  return {
+    _id: String(doc._id),
+    categories: cats,
+    categoryDisplay,
+    title: doc.title,
+    description: doc.description,
+    pricePerDay: doc.pricePerDay,
+    currency: doc.currency,
+    size: doc.size,
+    images: doc.images ?? [],
+    active: doc.active,
+    createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+    updatedAt: doc.updatedAt
+      ? doc.updatedAt instanceof Date
+        ? doc.updatedAt.toISOString()
+        : String(doc.updatedAt)
+      : undefined
+  };
+}
+
+function normalizeCategoryIds(input: unknown): string[] | null {
+  if (!Array.isArray(input) || input.length === 0) return null;
+  const ids = [...new Set(input.map((id) => String(id)).filter(Boolean))];
+  if (ids.length === 0) return null;
+  for (const id of ids) {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  }
+  return ids;
+}
+
+async function categoryNameTaken(name: string, excludeId?: string) {
+  const pattern = new RegExp(`^${escapeRegex(name.trim())}$`, "i");
+  const q: Record<string, unknown> = { name: pattern };
+  if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+    q._id = { $ne: excludeId };
+  }
+  return Category.findOne(q).lean();
+}
+
+async function modelIdsWithAvailabilityInRange(
+  modelIds: mongoose.Types.ObjectId[],
+  start: Date,
+  end: Date
+): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (modelIds.length === 0) return out;
+
+  const units = await EquipmentUnit.find({
+    modelId: { $in: modelIds },
+    status: { $ne: "retired" }
+  });
+
+  const unitIds = units.map((u) => u._id);
+  if (unitIds.length === 0) return out;
+
+  const [reservations, blocks] = await Promise.all([
+    Reservation.find({
+      unitId: { $in: unitIds },
+      status: { $in: ["hold", "confirmed"] },
+      startDate: { $lt: end },
+      endDate: { $gt: start }
+    }),
+    UnitBlock.find({
+      unitId: { $in: unitIds },
+      startDate: { $lt: end },
+      endDate: { $gt: start }
+    })
+  ]);
+
+  for (const unit of units) {
+    if (unit.status !== "active") continue;
+    const hasReservation = reservations.some(
+      (r) => String(r.unitId) === String(unit._id) && rangesOverlap({ startDate: start, endDate: end }, r)
+    );
+    if (hasReservation) continue;
+    const hasBlock = blocks.some(
+      (b) => String(b.unitId) === String(unit._id) && rangesOverlap({ startDate: start, endDate: end }, b)
+    );
+    if (hasBlock) continue;
+    out.add(String(unit.modelId));
+  }
+
+  return out;
+}
+
+router.get("/categories", async (_req: Request, res: Response) => {
   try {
-    const models = await EquipmentModel.find().sort({ updatedAt: -1, createdAt: -1 });
-    res.json(models);
+    const categories = await Category.find().sort({ name: 1 }).lean();
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/categories", checkAdminToken, async (req: Request, res: Response) => {
+  try {
+    const name = String(req.body.name ?? "").trim();
+    if (!name) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+    if (await categoryNameTaken(name)) {
+      res.status(409).json({ error: "A category with this name already exists" });
+      return;
+    }
+    const created = await Category.create({ name, updatedAt: new Date() });
+    res.json(created);
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("duplicate key")) {
+      res.status(409).json({ error: "A category with this name already exists" });
+      return;
+    }
+    res.status(400).json({ error: msg });
+  }
+});
+
+router.put("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response) => {
+  try {
+    const categoryId = String(req.params.categoryId ?? "");
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      res.status(400).json({ error: "Invalid category id" });
+      return;
+    }
+    const name = String(req.body.name ?? "").trim();
+    if (!name) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+    if (await categoryNameTaken(name, categoryId)) {
+      res.status(409).json({ error: "A category with this name already exists" });
+      return;
+    }
+    const updated = await Category.findByIdAndUpdate(
+      categoryId,
+      { name, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("duplicate key")) {
+      res.status(409).json({ error: "A category with this name already exists" });
+      return;
+    }
+    res.status(400).json({ error: msg });
+  }
+});
+
+router.delete("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response) => {
+  try {
+    const categoryId = String(req.params.categoryId ?? "");
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      res.status(400).json({ error: "Invalid category id" });
+      return;
+    }
+    const inUse = await EquipmentModel.exists({ categories: categoryId });
+    if (inUse) {
+      res.status(409).json({ error: "Cannot delete a category that is still assigned to equipment" });
+      return;
+    }
+    const deleted = await Category.findByIdAndDelete(categoryId);
+    if (!deleted) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const categoryId = String(req.query.categoryId ?? "").trim();
+    const fromRaw = String(req.query.from ?? "").trim();
+    const toRaw = String(req.query.to ?? "").trim();
+
+    const match: Record<string, unknown> = {};
+    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+      match.categories = categoryId;
+    }
+
+    let models = await EquipmentModel.find(match).populate("categories", "name").sort({ updatedAt: -1, createdAt: -1 }).lean();
+
+    if (fromRaw && toRaw) {
+      const start = new Date(fromRaw);
+      const end = new Date(toRaw);
+      if (isValidDateRange(start, end)) {
+        const modelIds = models.map((m) => m._id as mongoose.Types.ObjectId);
+        const available = await modelIdsWithAvailabilityInRange(modelIds, start, end);
+        models = models.filter((m) => available.has(String(m._id)));
+      }
+    }
+
+    res.json(models.map((m) => toEquipmentModelDto(m as Parameters<typeof toEquipmentModelDto>[0])));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -23,13 +250,18 @@ router.get("/", async (_req: Request, res: Response) => {
 
 router.get("/:modelId", async (req: Request, res: Response) => {
   try {
-    const model = await EquipmentModel.findById(req.params.modelId);
+    const modelId = String(req.params.modelId ?? "");
+    if (!mongoose.Types.ObjectId.isValid(modelId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const model = await EquipmentModel.findById(modelId).populate("categories", "name").lean();
     if (!model) {
       res.status(404).json({ error: "Not found" });
       return;
     }
     const units = await EquipmentUnit.find({ modelId: model._id }).sort({ unitNumber: 1 });
-    res.json({ model, units });
+    res.json({ model: toEquipmentModelDto(model as Parameters<typeof toEquipmentModelDto>[0]), units });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -37,7 +269,27 @@ router.get("/:modelId", async (req: Request, res: Response) => {
 
 router.post("/", checkAdminToken, async (req: Request, res: Response) => {
   try {
-    const payload = { ...req.body, updatedAt: new Date() };
+    const categoryIds = normalizeCategoryIds(req.body.categories);
+    if (!categoryIds) {
+      res.status(400).json({ error: "At least one category is required" });
+      return;
+    }
+    const found = await Category.countDocuments({ _id: { $in: categoryIds } });
+    if (found !== categoryIds.length) {
+      res.status(400).json({ error: "One or more categories do not exist" });
+      return;
+    }
+    const payload = {
+      categories: categoryIds,
+      title: req.body.title,
+      description: req.body.description ?? "",
+      pricePerDay: Number(req.body.pricePerDay),
+      currency: req.body.currency ?? "EUR",
+      size: req.body.size ?? "",
+      images: Array.isArray(req.body.images) ? req.body.images : [],
+      active: req.body.active !== false,
+      updatedAt: new Date()
+    };
     const created = await EquipmentModel.create(payload);
     const unitCode = `${created._id.toString().slice(-6).toUpperCase()}-001`;
     await EquipmentUnit.create({
@@ -48,7 +300,8 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
       status: "active",
       updatedAt: new Date()
     });
-    res.json(created);
+    const populated = await EquipmentModel.findById(created._id).populate("categories", "name").lean();
+    res.json(populated ? toEquipmentModelDto(populated as Parameters<typeof toEquipmentModelDto>[0]) : created);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -56,16 +309,43 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
 
 router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => {
   try {
+    const modelId = String(req.params.modelId ?? "");
+    if (!mongoose.Types.ObjectId.isValid(modelId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const categoryIds = normalizeCategoryIds(req.body.categories);
+    if (!categoryIds) {
+      res.status(400).json({ error: "At least one category is required" });
+      return;
+    }
+    const found = await Category.countDocuments({ _id: { $in: categoryIds } });
+    if (found !== categoryIds.length) {
+      res.status(400).json({ error: "One or more categories do not exist" });
+      return;
+    }
     const updated = await EquipmentModel.findByIdAndUpdate(
-      req.params.modelId,
-      { ...req.body, updatedAt: new Date() },
+      modelId,
+      {
+        categories: categoryIds,
+        title: req.body.title,
+        description: req.body.description ?? "",
+        pricePerDay: Number(req.body.pricePerDay),
+        currency: req.body.currency ?? "EUR",
+        size: req.body.size ?? "",
+        images: Array.isArray(req.body.images) ? req.body.images : [],
+        active: req.body.active !== false,
+        updatedAt: new Date()
+      },
       { new: true }
-    );
+    )
+      .populate("categories", "name")
+      .lean();
     if (!updated) {
       res.status(404).json({ error: "Not found" });
       return;
     }
-    res.json(updated);
+    res.json(toEquipmentModelDto(updated as Parameters<typeof toEquipmentModelDto>[0]));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

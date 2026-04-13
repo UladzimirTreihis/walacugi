@@ -2,15 +2,17 @@ import React, { useEffect, useState } from "react";
 import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import useApi from "../../hooks/useApi";
-import type { EquipmentModelItem } from "../../types";
+import type { CategoryItem, EquipmentModelItem } from "../../types";
 import SortableImageList from "./SortableImageList";
+import CategoryMultiField from "./CategoryMultiField";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
 
 export default function AdminEquipmentForm() {
   const { post, get, loading, error } = useApi();
   const [items, setItems] = useState<EquipmentModelItem[]>([]);
-  const [category, setCategory] = useState("");
+  const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([""]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pricePerDay, setPricePerDay] = useState<number>(0);
@@ -53,16 +55,26 @@ export default function AdminEquipmentForm() {
     });
   };
 
+  const refreshCategories = () => {
+    get<CategoryItem[]>("/equipment/categories").then((data) => {
+      if (data) setAllCategories(data);
+    });
+  };
+
   useEffect(() => {
     refresh();
+    refreshCategories();
   }, []);
+
+  const selectedCategoryIds = categoryIds.filter(Boolean);
+  const canCreate = selectedCategoryIds.length > 0 && Boolean(title.trim());
 
   const handleCreate = async () => {
     setFeedback(null);
     try {
       const filePaths = await uploadFiles(selectedFiles, "/upload/equipment-image", post);
       const payload = {
-        category,
+        categories: selectedCategoryIds,
         title,
         description,
         pricePerDay: Number(pricePerDay),
@@ -70,7 +82,7 @@ export default function AdminEquipmentForm() {
         size,
         images: filePaths
       };
-      const created = await post("/equipment", payload);
+      const created = await post<EquipmentModelItem>("/equipment", payload);
       if (!created) {
         setFeedback({
           severity: "error",
@@ -78,7 +90,7 @@ export default function AdminEquipmentForm() {
         });
         return;
       }
-      setCategory("");
+      setCategoryIds([""]);
       setTitle("");
       setDescription("");
       setPricePerDay(0);
@@ -112,7 +124,7 @@ export default function AdminEquipmentForm() {
         </Alert>
       )}
       <Stack spacing={1.5}>
-        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        <CategoryMultiField value={categoryIds} onChange={setCategoryIds} categories={allCategories} disabled={loading} />
         <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <TextField label="Description" multiline minRows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         <TextField type="number" label="Price per day" value={pricePerDay} onChange={(e) => setPricePerDay(Number(e.target.value || 0))} />
@@ -133,7 +145,7 @@ export default function AdminEquipmentForm() {
           Select Images
           <input type="file" multiple hidden onChange={handleFileChange} />
         </Button>
-        <Button variant="contained" onClick={handleCreate} disabled={loading || !category || !title}>
+        <Button variant="contained" onClick={handleCreate} disabled={loading || !canCreate}>
           {loading ? <CircularProgress size={22} /> : "Create Equipment"}
         </Button>
       </Stack>
@@ -146,7 +158,7 @@ export default function AdminEquipmentForm() {
           <Box key={item._id} sx={{ p: 1.5, border: "1px solid #ddd", borderRadius: 1 }}>
             <Typography variant="subtitle1">{item.title}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {item.category} • {item.pricePerDay} {item.currency}/day
+              {item.categoryDisplay} • {item.pricePerDay} {item.currency}/day
             </Typography>
             <Button size="small" component={Link} to={`/admin/equipment/edit/${item._id}`} sx={{ mt: 0.5 }}>
               Edit

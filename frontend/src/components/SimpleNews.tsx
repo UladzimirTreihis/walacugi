@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardMedia, CardContent, Button, Box, Chip, Stack } from "@mui/material";
+import { Card, CardMedia, CardContent, Button, Box, Stack } from "@mui/material";
 import { Link } from "react-router-dom";
 import useApi from "../hooks/useApi";
 import { useSelector, useDispatch } from "react-redux";
@@ -7,8 +7,11 @@ import { deleteNews } from "../store/newsSlice";
 import type { RootState } from "../store/store";
 import type { NewsItem } from "../types";
 import formatDateEU from "../utils/formatDateEU";
-import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
 import ClampedTitle from "./shared/ClampedTitle";
+import PinnedChip from "./shared/chips/PinnedChip";
+import LocationPinChip from "./shared/chips/LocationPinChip";
+import CountryFlagChip from "./shared/chips/CountryFlagChip";
+import CalendarDateChip from "./shared/chips/CalendarDateChip";
 
 export default function SimpleNews({ data }: { data: NewsItem }) {
   const { _id, images, title } = data;
@@ -73,49 +76,17 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
         />
         {data.pinned && (
           <Box sx={{ position: "absolute", top: 12, right: 12, zIndex: 3 }}>
-            <Chip
-              label="📌 Pinned"
-              color="warning"
-              size="small"
-              sx={{ bgcolor: "rgba(255,255,255,0.92)", fontWeight: 700 }}
-            />
+            <PinnedChip />
           </Box>
         )}
         {hasOverlayTags && (
           <Box sx={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 2 }}>
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ justifyContent: "center" }}>
-              {data.location && (
-                <Chip
-                  label={`📍 ${data.location}`}
-                  color="primary"
-                  variant="outlined"
-                  size="small"
-                  sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
-                />
-              )}
-              {data.countries?.map((code) => {
-                const meta = COUNTRY_BY_CODE[code];
-                const name = meta?.name ?? code.toUpperCase();
-                return (
-                  <Chip
-                    key={code}
-                    label={`${getFlagEmoji(code)} ${name}`}
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                    sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
-                  />
-                );
-              })}
-              {datedTag && (
-                <Chip
-                  label={`🗓️ ${datedTag}`}
-                  color="secondary"
-                  variant="outlined"
-                  size="small"
-                  sx={{ bgcolor: "rgba(255,255,255,0.85)" }}
-                />
-              )}
+              {data.location && <LocationPinChip location={data.location} />}
+              {data.countries?.map((code) => (
+                <CountryFlagChip key={code} code={code} />
+              ))}
+              {datedTag && <CalendarDateChip datedLabel={datedTag} />}
             </Stack>
           </Box>
         )}

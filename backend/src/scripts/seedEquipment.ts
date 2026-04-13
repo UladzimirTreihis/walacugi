@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import EquipmentModel from "../models/EquipmentModel.js";
 import EquipmentUnit from "../models/EquipmentUnit.js";
+import Category from "../models/Category.js";
 
 dotenv.config();
 
@@ -12,8 +13,13 @@ async function run() {
   }
   await mongoose.connect(uri);
 
+  let kayakCat = await Category.findOne({ name: /^kayak$/i });
+  if (!kayakCat) {
+    kayakCat = await Category.create({ name: "Kayak", updatedAt: new Date() });
+  }
+
   const model = await EquipmentModel.create({
-    category: "Kayak",
+    categories: [kayakCat._id],
     title: "Tour Kayak",
     description: "Stable touring kayak for river trips.",
     pricePerDay: 25,
