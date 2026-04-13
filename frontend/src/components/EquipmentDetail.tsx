@@ -1,18 +1,41 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import dayjs, { type Dayjs } from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import useApi from "../hooks/useApi";
 import type { EquipmentAvailabilityItem, EquipmentModelItem, EquipmentUnitItem } from "../types";
 import { addToCheckout } from "../store/checkoutSlice";
 import type { AppDispatch } from "../store/store";
-import { displayDateToIso, isoDateToDisplay } from "../utils/dateDisplay";
-import DateInputWithPicker from "./shared/DateInputWithPicker";
 
 interface DetailsResponse {
   model: EquipmentModelItem;
   units: EquipmentUnitItem[];
+}
+
+interface UnavailableRangeItem {
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
+dayjs.extend(customParseFormat);
+
+function isDateInsideRange(isoDate: string, range: UnavailableRangeItem): boolean {
+  return isoDate >= range.startDate && isoDate < range.endDate;
+}
+
+function rangesOverlap(
+  startA: string,
+  endA: string,
+  startB: string,
+  endB: string
+): boolean {
+  return startA < endB && endA > startB;
 }
 
 export default function EquipmentDetail() {
@@ -24,23 +47,25 @@ export default function EquipmentDetail() {
   const [model, setModel] = useState<EquipmentModelItem | null>(null);
   const [units, setUnits] = useState<EquipmentUnitItem[]>([]);
   const [availability, setAvailability] = useState<Record<string, EquipmentAvailabilityItem>>({});
-  const [startDateInput, setStartDateInput] = useState("");
-  const [endDateInput, setEndDateInput] = useState("");
+  const [unavailableRanges, setUnavailableRanges] = useState<UnavailableRangeItem[]>([]);
+  const [startDateIso, setStartDateIso] = useState("");
+  const [endDateIso, setEndDateIso] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
-  const startDateIso = useMemo(() => displayDateToIso(startDateInput), [startDateInput]);
-  const endDateIso = useMemo(() => displayDateToIso(endDateInput), [endDateInput]);
-
   const selectedUnit = useMemo(() => units.find((u) => u._id === selectedUnitId) ?? null, [selectedUnitId, units]);
+  const hasRangeConflict = useMemo(() => {
+    if (!startDateIso || !endDateIso) return false;
+    return unavailableRanges.some((range) => rangesOverlap(startDateIso, endDateIso, range.startDate, range.endDate));
+  }, [startDateIso, endDateIso, unavailableRanges]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const startDateParam = params.get("startDate");
     const endDateParam = params.get("endDate");
     if (startDateParam) {
-      setStartDateInput(isoDateToDisplay(startDateParam) || startDateParam);
+      setStartDateIso(startDateParam);
     }
     if (endDateParam) {
-      setEndDateInput(isoDateToDisplay(endDateParam) || endDateParam);
+      setEndDateIso(endDateParam);
     }
   }, [location.search]);
 
@@ -64,8 +89,24 @@ export default function EquipmentDetail() {
     });
   }, [startDateIso, endDateIso, modelId]);
 
+  useEffect(() => {
+    if (!selectedUnitId) {
+      setUnavailableRanges([]);
+      return;
+    }
+    const now = new Date();
+    const from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const to = new Date(now.getTime() + 730 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    get<{ unavailableRanges: UnavailableRangeItem[] }>(
+      `/equipment/units/${selectedUnitId}/unavailable?from=${from}&to=${to}`
+    ).then((data) => {
+      if (!data) return;
+      setUnavailableRanges(data.unavailableRanges ?? []);
+    });
+  }, [selectedUnitId]);
+
   const handleAdd = () => {
-    if (!model || !selectedUnit || !startDateIso || !endDateIso) return;
+    if (!model || !selectedUnit || !startDateIso || !endDateIso || hasRangeConflict) return;
     dispatch(
       addToCheckout({
         unitId: selectedUnit._id,
@@ -81,8 +122,19 @@ export default function EquipmentDetail() {
     );
   };
 
-  const hasStartDateError = startDateInput.trim().length > 0 && !startDateIso;
-  const hasEndDateError = endDateInput.trim().length > 0 && !endDateIso;
+  const shouldDisableStartDate = (value: Dayjs) => {
+    if (!selectedUnitId) return true;
+    const iso = value.format("YYYY-MM-DD");
+    return unavailableRanges.some((range) => isDateInsideRange(iso, range));
+  };
+
+  const shouldDisableEndDate = (value: Dayjs) => {
+    if (!selectedUnitId) return true;
+    if (!startDateIso) return false;
+    const iso = value.format("YYYY-MM-DD");
+    if (iso <= startDateIso) return true;
+    return unavailableRanges.some((range) => iso > range.startDate && iso < range.endDate);
+  };
 
   if (!model) return <Container sx={{ py: 8 }}><Typography>{t("common.loading")}</Typography></Container>;
 
@@ -91,23 +143,6 @@ export default function EquipmentDetail() {
       <Typography variant="h4" sx={{ mb: 1 }}>{model.title}</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>{model.description}</Typography>
       <Typography variant="h6" sx={{ mb: 2 }}>{model.pricePerDay} {model.currency}{t("common.per_day_suffix")}</Typography>
-
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
-        <DateInputWithPicker
-          label={t("common.start_date")}
-          value={startDateInput}
-          onChange={setStartDateInput}
-          error={hasStartDateError}
-          helperText={hasStartDateError ? t("common.date_format_help") : ""}
-        />
-        <DateInputWithPicker
-          label={t("common.end_date")}
-          value={endDateInput}
-          onChange={setEndDateInput}
-          error={hasEndDateError}
-          helperText={hasEndDateError ? t("common.date_format_help") : ""}
-        />
-      </Stack>
 
       <Typography variant="subtitle1" sx={{ mb: 1 }}>{t("equipment.choose_unit")}</Typography>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -127,8 +162,51 @@ export default function EquipmentDetail() {
         })}
       </Stack>
 
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2, mt: 2 }}>
+          <DatePicker
+            label={t("common.start_date")}
+            format="DD-MM-YYYY"
+            value={startDateIso ? dayjs(startDateIso, "YYYY-MM-DD") : null}
+            onChange={(value) => setStartDateIso(value && value.isValid() ? value.format("YYYY-MM-DD") : "")}
+            shouldDisableDate={shouldDisableStartDate}
+            disabled={!selectedUnitId}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                helperText: !selectedUnitId ? t("equipment.select_unit_first") : t("common.date_format_help")
+              }
+            }}
+          />
+          <DatePicker
+            label={t("common.end_date")}
+            format="DD-MM-YYYY"
+            value={endDateIso ? dayjs(endDateIso, "YYYY-MM-DD") : null}
+            onChange={(value) => setEndDateIso(value && value.isValid() ? value.format("YYYY-MM-DD") : "")}
+            shouldDisableDate={shouldDisableEndDate}
+            disabled={!selectedUnitId}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                helperText: !selectedUnitId ? t("equipment.select_unit_first") : t("common.date_format_help")
+              }
+            }}
+          />
+        </Stack>
+      </LocalizationProvider>
+
+      {hasRangeConflict && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t("equipment.range_conflict")}
+        </Alert>
+      )}
+
       <Box sx={{ mt: 3 }}>
-        <Button variant="contained" onClick={handleAdd} disabled={!selectedUnit || !startDateIso || !endDateIso}>
+        <Button
+          variant="contained"
+          onClick={handleAdd}
+          disabled={!selectedUnit || !startDateIso || !endDateIso || hasRangeConflict}
+        >
           {t("cart.add_to_cart")}
         </Button>
       </Box>

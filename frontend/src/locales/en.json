@@ -24,14 +24,16 @@
     "title": "Equipment",
     "empty": "No equipment available yet.",
     "choose_unit": "Choose unit",
-    "unavailable": "unavailable"
+    "unavailable": "unavailable",
+    "select_unit_first": "Select a unit first to pick dates",
+    "range_conflict": "Selected date range includes unavailable dates for this unit."
   },
   "cart": {
     "title": "Cart",
     "add_to_cart": "Add to cart",
     "check_link": "Check my cart link",
-    "link_placeholder": "Paste cart URL or encoded cart payload",
-    "see_saved": "See saved cart",
+    "link_placeholder": "Paste cart URL",
+    "see_saved": "See cart",
     "copy_share": "Copy share link",
     "confirm_admin": "Confirm booking (admin)",
     "empty": "Your cart is empty.",

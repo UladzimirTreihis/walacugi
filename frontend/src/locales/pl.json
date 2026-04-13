@@ -24,14 +24,16 @@
     "title": "Sprzęt",
     "empty": "Brak dostępnego sprzętu.",
     "choose_unit": "Wybierz egzemplarz",
-    "unavailable": "niedostępny"
+    "unavailable": "niedostępny",
+    "select_unit_first": "Najpierw wybierz egzemplarz, aby wskazać daty",
+    "range_conflict": "Wybrany zakres dat zawiera terminy niedostępne dla tego egzemplarza."
   },
   "cart": {
     "title": "Koszyk",
     "add_to_cart": "Dodaj do koszyka",
     "check_link": "Sprawdź mój link do koszyka",
-    "link_placeholder": "Wklej URL koszyka lub zakodowany payload koszyka",
-    "see_saved": "Zobacz zapisany koszyk",
+    "link_placeholder": "Wklej URL koszyka",
+    "see_saved": "Zobacz koszyk",
     "copy_share": "Skopiuj link",
     "confirm_admin": "Potwierdź rezerwację (admin)",
     "empty": "Twój koszyk jest pusty.",
