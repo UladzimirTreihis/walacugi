@@ -68,6 +68,9 @@ export interface CheckoutItem {
   unitCode: string;
   modelId: string;
   modelTitle: string;
+  modelImage?: string;
+  pricePerDay?: number;
+  currency?: string;
   startDate: string;
   endDate: string;
 }

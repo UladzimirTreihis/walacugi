@@ -24,6 +24,7 @@ import AdminEquipmentForm from "./components/admin/AdminEquipmentForm";
 import AdminEditEquipmentForm from "./components/admin/AdminEditEquipmentForm";
 import Equipment from "./components/Equipment";
 import EquipmentDetail from "./components/EquipmentDetail";
+import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 
 const theme = createAppTheme("light");
@@ -112,6 +113,16 @@ const router = createBrowserRouter([
       {
         path: "/equipment/:modelId",
         element: <EquipmentDetail />
+      }
+    ]
+  },
+  {
+    path: "/cart",
+    element: <Root />,
+    children: [
+      {
+        path: "/cart",
+        element: <Cart />
       }
     ]
   },

@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { IconButton, InputAdornment, TextField } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { displayDateToIso, isoDateToDisplay } from "../../utils/dateDisplay";
 
 interface DateInputWithPickerProps {
@@ -24,6 +25,7 @@ export default function DateInputWithPicker({
   error,
   helperText,
 }: DateInputWithPickerProps) {
+  const { t } = useTranslation();
   const hiddenDateInputRef = useRef<HTMLInputElement | null>(null);
   const isoValue = displayDateToIso(value);
 
@@ -52,7 +54,7 @@ export default function DateInputWithPicker({
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
-              <IconButton aria-label={`Open ${label.toLowerCase()} calendar`} edge="end" onClick={openNativeDatePicker}>
+              <IconButton aria-label={t("common.open_calendar_for", { label: label.toLowerCase() })} edge="end" onClick={openNativeDatePicker}>
                 <CalendarTodayIcon fontSize="small" />
               </IconButton>
             </InputAdornment>
