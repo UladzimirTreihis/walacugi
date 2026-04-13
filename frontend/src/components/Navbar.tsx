@@ -22,6 +22,8 @@ function Navbar() {
         <NavbarButton component={Link} variant="contained" to={"/"}>Walacugi</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/"} scrollToId="about">{t("about")}</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/events"}>{t("events")}</NavbarButton>
+        <NavbarButton component={Link} variant="contained" to={"/equipment"}>Equipment</NavbarButton>
+        <NavbarButton component={Link} variant="contained" to={"/checkout"}>Checkout</NavbarButton>
         {adminToken  
         ? <NavbarButton component={Link} variant="contained" to={"/admin"}>{t("admin")}</NavbarButton>
         : ""

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import SortableImageList from "./SortableImageList";
@@ -11,23 +11,15 @@ import {
   countryMatchesQuery,
   getFlagEmoji
 } from "../../constants/countries";
+import { displayDateToIso, isoDateToDisplay } from "../../utils/dateDisplay";
+import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
+import { uploadFiles } from "../../utils/uploadFiles";
 
-function displayDateToIso(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
-  if (!match) return "";
-  const [, dd, mm, yyyy] = match;
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function isoDateToDisplay(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
-  if (!match) return "";
-  const [, yyyy, mm, dd] = match;
-  return `${dd}-${mm}-${yyyy}`;
+interface EditableImage {
+  id: string;
+  previewUrl: string;
+  existingPath?: string;
+  file?: File;
 }
 
 export default function AdminEditEventForm() {
@@ -50,9 +42,8 @@ export default function AdminEditEventForm() {
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
   const [pinned, setPinned] = useState(false);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+  const [images, setImages] = useState<EditableImage[]>([]);
+  const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   useEffect(() => {
     if (!adminToken) {
@@ -75,7 +66,13 @@ export default function AdminEditEventForm() {
           setAgeRestriction(data.ageRestriction || "");
           setChatLink(data.chatLink || "");
           setDifficultyLevel(data.difficultyLevel || 3);
-          setExistingImages(data.images || []);
+          setImages(
+            (data.images || []).map((path: string, index: number) => ({
+              id: `existing-${index}-${path}`,
+              previewUrl: path,
+              existingPath: path
+            }))
+          );
           setPinned(Boolean(data.pinned));
         }
       })
@@ -84,33 +81,41 @@ export default function AdminEditEventForm() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    setNewFiles(files);
-    const previews = files.map((file) => URL.createObjectURL(file));
-    setNewImagePreviews(previews);
-  };
-
-  async function handleUpload(): Promise<string[]> {
-    if (newFiles.length === 0) return [];
-    const uploadedFilePaths: string[] = [];
-    for (const file of newFiles) {
-      const formData = new FormData();
-      formData.append("images", file);
-      const res = await post<{ filePaths: string[] }>("/upload/event-image", formData, {
-        Authorization: `Bearer ${adminToken ?? ""}`,
-      });
-      if (res?.filePaths) {
-        uploadedFilePaths.push(...res.filePaths);
-      }
-    }
-    return uploadedFilePaths;
+    if (files.length === 0) return;
+    const newImages: EditableImage[] = files.map((file, index) => ({
+      id: `new-${Date.now()}-${index}`,
+      previewUrl: URL.createObjectURL(file),
+      file
+    }));
+    setImages((prev) => [...prev, ...newImages]);
+    e.target.value = "";
   }
 
   async function handleUpdateEvent() {
+    setFeedback(null);
     try {
       if (!adminToken) {
         return;
       }
-      const uploadedImages = await handleUpload();
+      const newImages = images.filter((item) => item.file);
+      const uploadedImages = await uploadFiles(
+        newImages.map((item) => item.file as File),
+        "/upload/event-image",
+        post,
+        { Authorization: `Bearer ${adminToken}` }
+      );
+      if (uploadedImages.length !== newImages.length) {
+        setFeedback({
+          severity: "error",
+          message: "Some new images failed to upload. Please try again."
+        });
+        return;
+      }
+      const uploadedById = new Map<string, string>();
+      newImages.forEach((item, index) => {
+        const path = uploadedImages[index];
+        if (path) uploadedById.set(item.id, path);
+      });
       const startDateIso = displayDateToIso(startDate);
       const endDateIso = displayDateToIso(endDate);
       const datedAtIso = displayDateToIso(datedAt);
@@ -129,45 +134,36 @@ export default function AdminEditEventForm() {
         chatLink,
         difficultyLevel,
         pinned,
-        images: [...existingImages, ...uploadedImages],
+        images: images
+          .map((item) => item.existingPath ?? uploadedById.get(item.id) ?? "")
+          .filter((path) => path.length > 0),
       };
       const result = await put(`/events/${eventId}`, updatedEvent, {
         Authorization: `Bearer ${adminToken}`,
       });
       if (!result) {
+        setFeedback({
+          severity: "error",
+          message: "We could not update this event. Please try again."
+        });
         return;
       }
-      navigate("/admin");
+      setFeedback({ severity: "success", message: "Event updated successfully." });
     } catch (error) {
       console.error("Error updating event:", error);
+      setFeedback({
+        severity: "error",
+        message: "Something went wrong while updating the event. Please try again."
+      });
     }
   }
 
   function handleDeleteImage(index: number) {
-    setExistingImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    setImages((prevImages) => prevImages.filter((_, i) => i !== index));
   }
-  function handleMoveExistingImage(fromIndex: number, toIndex: number) {
-    if (toIndex < 0 || toIndex >= existingImages.length) return;
-    setExistingImages((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }
-  function handleDeleteNewImage(index: number) {
-    setNewFiles((prev) => prev.filter((_, i) => i !== index));
-    setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  }
-  function handleMoveNewImage(fromIndex: number, toIndex: number) {
-    if (toIndex < 0 || toIndex >= newFiles.length) return;
-    setNewFiles((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-    setNewImagePreviews((prev) => {
+  function handleMoveImage(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= images.length) return;
+    setImages((prev) => {
       const next = [...prev];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
@@ -186,7 +182,16 @@ export default function AdminEditEventForm() {
       </Typography>
 
       {loading && <CircularProgress />}
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {DEFAULT_REQUEST_ERROR_MESSAGE}
+        </Alert>
+      )}
+      {feedback && (
+        <Alert severity={feedback.severity} sx={{ mb: 2 }}>
+          {feedback.message}
+        </Alert>
+      )}
 
       <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
       <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} margin="normal" />
@@ -276,23 +281,13 @@ export default function AdminEditEventForm() {
       <TextField fullWidth label="Description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} margin="normal" />
 
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
-        Existing Images:
+        Images:
       </Typography>
       <SortableImageList
-        images={existingImages}
-        onMove={handleMoveExistingImage}
+        images={images.map((item) => item.previewUrl)}
+        onMove={handleMoveImage}
         onRemove={handleDeleteImage}
-        imageAlt="Existing event image"
-      />
-
-      <Typography variant="subtitle1" sx={{ mt: 2 }}>
-        New Images:
-      </Typography>
-      <SortableImageList
-        images={newImagePreviews}
-        onMove={handleMoveNewImage}
-        onRemove={handleDeleteNewImage}
-        imageAlt="New event image"
+        imageAlt="Event image"
       />
 
       <input type="file" multiple onChange={handleFileChange} style={{ marginTop: 16 }} />

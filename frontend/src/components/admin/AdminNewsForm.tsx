@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   FormControlLabel,
@@ -14,15 +15,9 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { COUNTRY_OPTIONS, COUNTRY_BY_CODE, countryMatchesQuery, getFlagEmoji } from "../../constants/countries";
 import SortableImageList from "./SortableImageList";
-
-function displayDateToIso(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
-  if (!match) return "";
-  const [, dd, mm, yyyy] = match;
-  return `${yyyy}-${mm}-${dd}`;
-}
+import { displayDateToIso } from "../../utils/dateDisplay";
+import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
+import { uploadFiles } from "../../utils/uploadFiles";
 
 export default function AdminNewsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -33,6 +28,7 @@ export default function AdminNewsForm() {
   const [pinned, setPinned] = useState(false);
   const [location, setLocation] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   const { post, loading, error } = useApi();
 
@@ -43,23 +39,10 @@ export default function AdminNewsForm() {
     setImagePreviews(previews);
   };
 
-  async function handleUpload(): Promise<string[]> {
-    if (selectedFiles.length === 0) return [];
-    const uploadedFilePaths: string[] = [];
-    for (const file of selectedFiles) {
-      const formData = new FormData();
-      formData.append("images", file);
-      const res = await post<{ filePaths: string[] }>("/upload/news-image", formData);
-      if (res?.filePaths) {
-        uploadedFilePaths.push(...res.filePaths);
-      }
-    }
-    return uploadedFilePaths;
-  }
-
   async function handleCreateNews() {
+    setFeedback(null);
     try {
-      const filePaths = await handleUpload();
+      const filePaths = await uploadFiles(selectedFiles, "/upload/news-image", post);
       const datedAtIso = displayDateToIso(datedAt);
       const newsBody = {
         title,
@@ -71,7 +54,13 @@ export default function AdminNewsForm() {
         countries
       };
       const result = await post("/news", newsBody);
-      if (!result) return;
+      if (!result) {
+        setFeedback({
+          severity: "error",
+          message: "We could not create this news item. Please try again."
+        });
+        return;
+      }
       setSelectedFiles([]);
       setImagePreviews([]);
       setTitle("");
@@ -80,8 +69,13 @@ export default function AdminNewsForm() {
       setPinned(false);
       setLocation("");
       setCountries([]);
+      setFeedback({ severity: "success", message: "News item created successfully." });
     } catch (error) {
       console.error("Error creating news:", error);
+      setFeedback({
+        severity: "error",
+        message: "Something went wrong while creating news. Please try again."
+      });
     }
   }
 
@@ -112,7 +106,16 @@ export default function AdminNewsForm() {
       <Typography variant="h4" gutterBottom>
         Create News
       </Typography>
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {DEFAULT_REQUEST_ERROR_MESSAGE}
+        </Alert>
+      )}
+      {feedback && (
+        <Alert severity={feedback.severity} sx={{ mb: 2 }}>
+          {feedback.message}
+        </Alert>
+      )}
       <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
       <TextField
         fullWidth
