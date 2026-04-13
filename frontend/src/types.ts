@@ -32,9 +32,17 @@ export interface EventItem {
   pinned?: boolean;
 }
 
+export interface CategoryItem {
+  _id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface EquipmentModelItem {
   _id: string;
-  category: string;
+  categories: CategoryItem[];
+  categoryDisplay: string;
   title: string;
   description: string;
   pricePerDay: number;

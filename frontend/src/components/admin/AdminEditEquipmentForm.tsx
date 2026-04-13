@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import useApi from "../../hooks/useApi";
-import type { EquipmentModelItem, EquipmentUnitItem } from "../../types";
+import type { CategoryItem, EquipmentModelItem, EquipmentUnitItem } from "../../types";
 import AdminEquipmentUnitsPanel from "./AdminEquipmentUnitsPanel";
 import SortableImageList from "./SortableImageList";
+import CategoryMultiField from "./CategoryMultiField";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
 
@@ -26,7 +27,8 @@ export default function AdminEditEquipmentForm() {
   const { get, put, post, del, loading, error } = useApi();
   const [model, setModel] = useState<EquipmentModelItem | null>(null);
   const [units, setUnits] = useState<EquipmentUnitItem[]>([]);
-  const [category, setCategory] = useState("");
+  const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([""]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pricePerDay, setPricePerDay] = useState<number>(0);
@@ -35,12 +37,19 @@ export default function AdminEditEquipmentForm() {
   const [images, setImages] = useState<EditableImage[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
+  const refreshCategories = () => {
+    get<CategoryItem[]>("/equipment/categories").then((data) => {
+      if (data) setAllCategories(data);
+    });
+  };
+
   const refresh = () => {
     get<EquipmentDetailsResponse>(`/equipment/${modelId}`).then((data) => {
       if (!data) return;
       setModel(data.model);
       setUnits(data.units);
-      setCategory(data.model.category);
+      const ids = (data.model.categories ?? []).map((c) => c._id).filter(Boolean);
+      setCategoryIds(ids.length > 0 ? ids : [""]);
       setTitle(data.model.title);
       setDescription(data.model.description);
       setPricePerDay(data.model.pricePerDay);
@@ -57,6 +66,10 @@ export default function AdminEditEquipmentForm() {
   };
 
   useEffect(() => {
+    refreshCategories();
+  }, []);
+
+  useEffect(() => {
     refresh();
   }, [modelId]);
 
@@ -70,11 +83,16 @@ export default function AdminEditEquipmentForm() {
     }));
     setImages((prev) => [...prev, ...newImages]);
     e.target.value = "";
-  }
+  };
 
   const handleSave = async () => {
     if (!model) return;
     setFeedback(null);
+    const selected = categoryIds.filter(Boolean);
+    if (selected.length === 0) {
+      setFeedback({ severity: "error", message: "Select at least one category." });
+      return;
+    }
     try {
       const newImages = images.filter((item) => item.file);
       const uploadedImages = await uploadFiles(
@@ -95,7 +113,7 @@ export default function AdminEditEquipmentForm() {
         if (path) uploadedById.set(item.id, path);
       });
       const payload = {
-        category,
+        categories: selected,
         title,
         description,
         pricePerDay: Number(pricePerDay),
@@ -105,7 +123,7 @@ export default function AdminEditEquipmentForm() {
           .map((item) => item.existingPath ?? uploadedById.get(item.id) ?? "")
           .filter((path) => path.length > 0)
       };
-      const res = await put(`/equipment/${model._id}`, payload);
+      const res = await put<EquipmentModelItem>(`/equipment/${model._id}`, payload);
       if (res) {
         setFeedback({ severity: "success", message: "Equipment model updated successfully." });
         refresh();
@@ -168,7 +186,7 @@ export default function AdminEditEquipmentForm() {
       )}
 
       <Stack spacing={1.5}>
-        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        <CategoryMultiField value={categoryIds} onChange={setCategoryIds} categories={allCategories} disabled={loading} />
         <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <TextField
           label="Description"

@@ -3,6 +3,12 @@ import type { EquipmentModelItem } from "../types";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
+export interface FetchEquipmentParams {
+  categoryId?: string;
+  from?: string;
+  to?: string;
+}
+
 interface EquipmentState {
   items: EquipmentModelItem[];
   loading: boolean;
@@ -15,13 +21,21 @@ const initialState: EquipmentState = {
   error: null
 };
 
-export const fetchEquipment = createAsyncThunk<EquipmentModelItem[]>("equipment/fetchEquipment", async () => {
-  const response = await fetch(`${API_URL}/equipment`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch equipment");
+export const fetchEquipment = createAsyncThunk<EquipmentModelItem[], FetchEquipmentParams | void>(
+  "equipment/fetchEquipment",
+  async (params) => {
+    const sp = new URLSearchParams();
+    if (params && params.categoryId) sp.set("categoryId", params.categoryId);
+    if (params && params.from) sp.set("from", params.from);
+    if (params && params.to) sp.set("to", params.to);
+    const qs = sp.toString();
+    const response = await fetch(`${API_URL}/equipment${qs ? `?${qs}` : ""}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch equipment");
+    }
+    return response.json() as Promise<EquipmentModelItem[]>;
   }
-  return response.json() as Promise<EquipmentModelItem[]>;
-});
+);
 
 const equipmentSlice = createSlice({
   name: "equipment",
