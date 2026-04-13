@@ -7,7 +7,9 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.3",
+    "@mui/x-date-pickers": "^6.20.2",
     "@reduxjs/toolkit": "^2.6.0",
+    "dayjs": "^1.11.20",
     "dompurify": "^3.2.4",
     "i18next": "^24.2.2",
     "react": "^18.2.0",
@@ -55,6 +57,7 @@
     "@types/react-slick": "^0.23.13",
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
+    "ajv": "^8.18.0",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2"

@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
+import { logger, requestLoggingMiddleware } from "./utils/logger.js";
 
 import newsRoutes from "./routes/newsRoutes.js";
 import eventsRoutes from "./routes/eventsRoutes.js";
@@ -15,6 +16,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(requestLoggingMiddleware);
 
 const PORT = Number(process.env.PORT) || 4000;
 const MONGO_USERNAME = process.env.MONGO_INITDB_ROOT_USERNAME;
@@ -25,8 +27,8 @@ const DB_URI = process.env.MONGO_URL || fallbackUri;
 
 mongoose
   .connect(DB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err: Error) => console.error("MongoDB connection error:", err.message));
+  .then(() => logger.info("mongodb_connected"))
+  .catch((err: Error) => logger.error("mongodb_connection_error", { error: err }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -41,5 +43,13 @@ app.use("/api/reservations", reservationRoutes);
 app.use("/uploads", express.static("uploads"));
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info("server_started", { port: PORT });
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("unhandled_rejection", { reason });
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error("uncaught_exception", { error: err });
 });

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import type { ClientSession } from "mongodb";
 import mongoose from "mongoose";
 import EquipmentModel from "../models/EquipmentModel.js";
 import EquipmentUnit from "../models/EquipmentUnit.js";
@@ -7,6 +8,7 @@ import Reservation from "../models/Reservation.js";
 import UnitBlock from "../models/UnitBlock.js";
 import { checkAdminToken } from "../utils/middleware.js";
 import { isValidDateRange, rangesOverlap } from "../utils/bookingValidation.js";
+import { logger } from "../utils/logger.js";
 
 const router = Router();
 
@@ -125,6 +127,68 @@ router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response
   }
 });
 
+router.get("/units/:unitId/unavailable", async (req: Request, res: Response) => {
+  try {
+    const unit = await EquipmentUnit.findById(req.params.unitId);
+    if (!unit) {
+      res.status(404).json({ error: "Unit not found" });
+      return;
+    }
+
+    const fromRaw = String(req.query.from ?? "");
+    const toRaw = String(req.query.to ?? "");
+    const from = fromRaw ? new Date(fromRaw) : new Date();
+    const to = toRaw ? new Date(toRaw) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    if (!isValidDateRange(from, to)) {
+      res.status(400).json({ error: "Invalid unavailable range query" });
+      return;
+    }
+
+    const [reservations, blocks] = await Promise.all([
+      Reservation.find({
+        unitId: unit._id,
+        status: { $in: ["hold", "confirmed"] },
+        startDate: { $lt: to },
+        endDate: { $gt: from }
+      }).sort({ startDate: 1 }),
+      UnitBlock.find({
+        unitId: unit._id,
+        startDate: { $lt: to },
+        endDate: { $gt: from }
+      }).sort({ startDate: 1 })
+    ]);
+
+    const unavailableRanges = [
+      ...reservations.map((item) => ({
+        startDate: item.startDate.toISOString().slice(0, 10),
+        endDate: item.endDate.toISOString().slice(0, 10),
+        reason: "reserved"
+      })),
+      ...blocks.map((item) => ({
+        startDate: item.startDate.toISOString().slice(0, 10),
+        endDate: item.endDate.toISOString().slice(0, 10),
+        reason: item.reason || "blocked"
+      }))
+    ];
+
+    if (unit.status !== "active") {
+      unavailableRanges.push({
+        startDate: from.toISOString().slice(0, 10),
+        endDate: to.toISOString().slice(0, 10),
+        reason: `status:${unit.status}`
+      });
+    }
+
+    res.json({
+      unitId: String(unit._id),
+      unitStatus: unit.status,
+      unavailableRanges
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 router.delete("/units/:unitId", checkAdminToken, async (req: Request, res: Response) => {
   try {
     const unitId = req.params.unitId;
@@ -218,71 +282,139 @@ router.delete("/blocks/:blockId", checkAdminToken, async (req: Request, res: Res
 
 router.post("/confirm-booking", checkAdminToken, async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
+  const startedAtMs = Date.now();
+  const logContext = {
+    requestId: req.requestId,
+    route: "POST /api/equipment/confirm-booking"
+  };
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     if (items.length === 0) {
+      logger.warn("confirm_booking_empty_items", logContext);
       res.status(400).json({ error: "No checkout items provided" });
       return;
     }
 
     const checkoutRef = String(req.body.checkoutRef ?? "");
+    logger.info("confirm_booking_started", {
+      ...logContext,
+      checkoutRef,
+      itemCount: items.length
+    });
     const results: Array<{ unitId: string; ok: boolean; reason?: string }> = [];
 
-    await session.withTransaction(async () => {
+    const processItems = async (sessionArg: ClientSession | null) => {
       for (const item of items) {
         const unitId = String(item.unitId ?? "");
         const startDate = new Date(item.startDate);
         const endDate = new Date(item.endDate);
         if (!unitId || !isValidDateRange(startDate, endDate)) {
+          logger.warn("confirm_booking_invalid_item", {
+            ...logContext,
+            unitId,
+            startDate: item.startDate,
+            endDate: item.endDate
+          });
           results.push({ unitId, ok: false, reason: "Invalid date range" });
           continue;
         }
 
-        const unit = await EquipmentUnit.findById(unitId).session(session);
+        const unitQuery = EquipmentUnit.findById(unitId);
+        if (sessionArg) unitQuery.session(sessionArg);
+        const unit = await unitQuery;
         if (!unit || unit.status !== "active") {
+          logger.warn("confirm_booking_unit_unavailable", {
+            ...logContext,
+            unitId
+          });
           results.push({ unitId, ok: false, reason: "Unit unavailable" });
           continue;
         }
 
+        const conflictReservationQuery = Reservation.findOne({
+          unitId,
+          status: { $in: ["hold", "confirmed"] },
+          startDate: { $lt: endDate },
+          endDate: { $gt: startDate }
+        });
+        const conflictBlockQuery = UnitBlock.findOne({
+          unitId,
+          startDate: { $lt: endDate },
+          endDate: { $gt: startDate }
+        });
+        if (sessionArg) {
+          conflictReservationQuery.session(sessionArg);
+          conflictBlockQuery.session(sessionArg);
+        }
         const [conflictReservation, conflictBlock] = await Promise.all([
-          Reservation.findOne({
-            unitId,
-            status: { $in: ["hold", "confirmed"] },
-            startDate: { $lt: endDate },
-            endDate: { $gt: startDate }
-          }).session(session),
-          UnitBlock.findOne({
-            unitId,
-            startDate: { $lt: endDate },
-            endDate: { $gt: startDate }
-          }).session(session)
+          conflictReservationQuery,
+          conflictBlockQuery
         ]);
 
         if (conflictReservation || conflictBlock) {
+          logger.warn("confirm_booking_date_conflict", {
+            ...logContext,
+            unitId,
+            hasReservation: Boolean(conflictReservation),
+            hasBlock: Boolean(conflictBlock)
+          });
           results.push({ unitId, ok: false, reason: "Date range conflict" });
           continue;
         }
 
-        await Reservation.create(
-          [
-            {
-              unitId,
-              startDate,
-              endDate,
-              status: "confirmed",
-              checkoutRef,
-              updatedAt: new Date()
-            }
-          ],
-          { session }
-        );
+        const reservationPayload = {
+          unitId,
+          startDate,
+          endDate,
+          status: "confirmed",
+          checkoutRef,
+          updatedAt: new Date()
+        };
+        if (sessionArg) {
+          await Reservation.create([reservationPayload], { session: sessionArg });
+        } else {
+          await Reservation.create(reservationPayload);
+        }
 
         results.push({ unitId, ok: true });
       }
-    });
+    };
 
+    let usedTransaction = true;
+    try {
+      await session.withTransaction(async () => {
+        await processItems(session);
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      const noTransactionSupport = message.includes("Transaction numbers are only allowed on a replica set member or mongos");
+      if (!noTransactionSupport) throw err;
+
+      usedTransaction = false;
+      results.length = 0;
+      logger.warn("confirm_booking_transactions_not_supported_fallback", {
+        ...logContext,
+        reason: message
+      });
+      await processItems(null);
+    }
+
+    logger.info("confirm_booking_completed", {
+      ...logContext,
+      checkoutRef,
+      itemCount: items.length,
+      successCount: results.filter((item) => item.ok).length,
+      failedCount: results.filter((item) => !item.ok).length,
+      usedTransaction,
+      durationMs: Date.now() - startedAtMs
+    });
     res.json({ results });
   } catch (err) {
+    logger.error("confirm_booking_failed", {
+      ...logContext,
+      durationMs: Date.now() - startedAtMs,
+      error: err
+    });
     res.status(400).json({ error: (err as Error).message });
   } finally {
     await session.endSession();
