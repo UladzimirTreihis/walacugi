@@ -17,9 +17,6 @@ function Navbar() {
       justifyContent: "center",
       alignItems: "center",
       }}>
-        {/* <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          My Website
-        </Typography> */}
         <NavbarButton component={Link} variant="contained" to={"/"}>Walacugi</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/"} scrollToId="about">{t("about")}</NavbarButton>
         <NavbarButton component={Link} variant="contained" to={"/events"}>{t("events")}</NavbarButton>
@@ -28,7 +25,7 @@ function Navbar() {
           component={Link}
           to="/cart"
           color="inherit"
-          sx={{ minWidth: "auto", px: 1.2, position: "relative", fontSize: 20, lineHeight: 1 }}
+          sx={{ minWidth: "auto", px: 1.2, mr: 3, position: "relative", fontSize: 20, lineHeight: 1 }}
           aria-label={t("cart.title")}
         >
           <span role="img" aria-label="cart">🛍️</span>

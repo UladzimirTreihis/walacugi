@@ -31,11 +31,14 @@ export default function AdminEditEquipmentForm() {
   const [categoryIds, setCategoryIds] = useState<string[]>([""]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [pricePerDay, setPricePerDay] = useState<number>(0);
+  const [pricePerDay, setPricePerDay] = useState<string>("");
   const [currency, setCurrency] = useState("EUR");
   const [size, setSize] = useState("");
   const [images, setImages] = useState<EditableImage[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
+  const normalizedPricePerDay = Number.parseFloat(pricePerDay.replace(",", "."));
+  const hasPriceInput = pricePerDay.trim().length > 0;
+  const isValidPricePerDay = Number.isFinite(normalizedPricePerDay) && normalizedPricePerDay > 0;
 
   const refreshCategories = () => {
     get<CategoryItem[]>("/equipment/categories").then((data) => {
@@ -52,7 +55,7 @@ export default function AdminEditEquipmentForm() {
       setCategoryIds(ids.length > 0 ? ids : [""]);
       setTitle(data.model.title);
       setDescription(data.model.description);
-      setPricePerDay(data.model.pricePerDay);
+      setPricePerDay(String(data.model.pricePerDay ?? ""));
       setCurrency(data.model.currency ?? "EUR");
       setSize(data.model.size ?? "");
       setImages(
@@ -88,6 +91,13 @@ export default function AdminEditEquipmentForm() {
   const handleSave = async () => {
     if (!model) return;
     setFeedback(null);
+    if (!isValidPricePerDay) {
+      setFeedback({
+        severity: "error",
+        message: "Price per day must be a valid number greater than 0."
+      });
+      return;
+    }
     const selected = categoryIds.filter(Boolean);
     if (selected.length === 0) {
       setFeedback({ severity: "error", message: "Select at least one category." });
@@ -116,7 +126,7 @@ export default function AdminEditEquipmentForm() {
         categories: selected,
         title,
         description,
-        pricePerDay: Number(pricePerDay),
+        pricePerDay: normalizedPricePerDay,
         currency,
         size,
         images: images
@@ -196,10 +206,13 @@ export default function AdminEditEquipmentForm() {
           onChange={(e) => setDescription(e.target.value)}
         />
         <TextField
-          type="number"
+          type="text"
           label="Price per day"
           value={pricePerDay}
-          onChange={(e) => setPricePerDay(Number(e.target.value || 0))}
+          onChange={(e) => setPricePerDay(e.target.value)}
+          error={hasPriceInput && !isValidPricePerDay}
+          helperText={hasPriceInput && !isValidPricePerDay ? "Enter a valid number greater than 0 (e.g. 12.5)" : ""}
+          inputProps={{ inputMode: "decimal" }}
         />
         <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
         <TextField label="Size (optional)" value={size} onChange={(e) => setSize(e.target.value)} />
