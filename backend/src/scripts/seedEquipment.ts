@@ -23,7 +23,7 @@ async function run() {
     title: "Tour Kayak",
     description: "Stable touring kayak for river trips.",
     pricePerDay: 25,
-    currency: "EUR",
+    currency: "PLN",
     size: "M",
     images: [],
     active: true,
