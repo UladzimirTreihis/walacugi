@@ -115,7 +115,6 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                e.preventDefault();
               }}
             >
               Edit
