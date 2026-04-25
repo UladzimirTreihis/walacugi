@@ -9,10 +9,16 @@ import {
   DialogContent,
   DialogTitle,
   Grid2 as Grid,
+  IconButton,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
+import LinkIcon from "@mui/icons-material/Link";
+import TelegramIcon from "@mui/icons-material/Telegram";
+import EmailIcon from "@mui/icons-material/Email";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import { useDispatch, useSelector } from "react-redux";
 import { clearCheckout, hydrateCheckout, removeFromCheckout } from "../store/checkoutSlice";
 import type { CheckoutItem } from "../types";
@@ -63,6 +69,19 @@ export default function Cart() {
 
   const copyShare = async () => {
     await navigator.clipboard.writeText(shareUrl);
+  };
+
+  const shareOnTelegram = () => {
+    const text = t("cart.share_message");
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    window.open(telegramUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const shareViaEmail = () => {
+    const subject = t("cart.email_subject");
+    const body = `${t("cart.share_message")}\n\n${shareUrl}`;
+    const mailto = `mailto:poznajswiatbialystok@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
   };
 
   const checkCartLink = () => {
@@ -141,20 +160,48 @@ export default function Cart() {
       </Box>
 
       <Typography variant="h4" sx={{ mb: 2 }}>{t("cart.title")}</Typography>
-
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <Button variant="outlined" onClick={copyShare} disabled={items.length === 0}>
-          {t("cart.copy_share")}
-        </Button>
-        <Button variant="outlined" onClick={() => dispatch(clearCheckout())} disabled={items.length === 0}>
-          {t("common.clear")}
-        </Button>
-        {adminToken && (
-          <Button variant="contained" color="success" onClick={() => setConfirmOpen(true)} disabled={items.length === 0}>
-            {t("cart.confirm_admin")}
-          </Button>
-        )}
-      </Stack>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          {t("cart.note")}
+        </Typography>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+          <Tooltip title={t("cart.copy_share")}>
+            <span>
+              <IconButton onClick={copyShare} disabled={items.length === 0} aria-label={t("cart.copy_share")}>
+                <LinkIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title={t("cart.share_telegram")}>
+            <span>
+              <IconButton onClick={shareOnTelegram} disabled={items.length === 0} aria-label={t("cart.share_telegram")}>
+                <TelegramIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title={t("cart.share_email")}>
+            <span>
+              <IconButton onClick={shareViaEmail} disabled={items.length === 0} aria-label={t("cart.share_email")}>
+                <EmailIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          {adminToken && (
+            <Tooltip title={t("cart.confirm_admin")}>
+              <span>
+                <IconButton
+                  color="success"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={items.length === 0}
+                  aria-label={t("cart.confirm_admin")}
+                >
+                  <TaskAltIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Stack>
+      </Box>
 
       <Grid container spacing={2}>
         {items.map((item) => (

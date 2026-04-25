@@ -56,7 +56,7 @@ export default function AdminEditEquipmentForm() {
       setTitle(data.model.title);
       setDescription(data.model.description);
       setPricePerDay(String(data.model.pricePerDay ?? ""));
-      setCurrency(data.model.currency ?? "EUR");
+      setCurrency(data.model.currency ?? "PLN");
       setSize(data.model.size ?? "");
       setImages(
         (data.model.images ?? []).map((path, index) => ({

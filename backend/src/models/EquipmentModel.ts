@@ -7,7 +7,7 @@ const equipmentModelSchema = new Schema({
   title: { type: String, required: true, trim: true },
   description: { type: String, default: "" },
   pricePerDay: { type: Number, required: true, min: 0 },
-  currency: { type: String, default: "EUR", trim: true },
+  currency: { type: String, default: "PLN", trim: true },
   size: { type: String, default: "" },
   images: [{ type: String }],
   active: { type: Boolean, default: true },
