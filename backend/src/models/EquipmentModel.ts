@@ -1,14 +1,15 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import { EMPTY_LOCALIZED_TEXT, localizedTextSchema } from "./localized.js";
 
 const equipmentModelSchema = new Schema({
   /** @deprecated Prefer `categories`; kept for older documents */
   category: { type: String, trim: true },
   categories: [{ type: Schema.Types.ObjectId, ref: "Category" }],
-  title: { type: String, required: true, trim: true },
-  description: { type: String, default: "" },
+  title: { type: localizedTextSchema, required: true },
+  description: { type: localizedTextSchema, default: () => ({ ...EMPTY_LOCALIZED_TEXT }) },
   pricePerDay: { type: Number, required: true, min: 0 },
   currency: { type: String, default: "PLN", trim: true },
-  size: { type: String, default: "" },
+  size: { type: localizedTextSchema, default: () => ({ ...EMPTY_LOCALIZED_TEXT }) },
   images: [{ type: String }],
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },

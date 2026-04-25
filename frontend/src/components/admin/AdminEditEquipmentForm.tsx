@@ -1,16 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import { useSelector } from "react-redux";
 import useApi from "../../hooks/useApi";
-import type { CategoryItem, EquipmentModelItem, EquipmentUnitItem } from "../../types";
+import type { CategoryItem, EquipmentModelItem, EquipmentUnitItem, LocalizedText } from "../../types";
 import AdminEquipmentUnitsPanel from "./AdminEquipmentUnitsPanel";
 import SortableImageList from "./SortableImageList";
 import CategoryMultiField from "./CategoryMultiField";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
+import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../../utils/langUrl";
+import type { RootState } from "../../store/store";
 
-interface EquipmentDetailsResponse {
-  model: EquipmentModelItem;
+interface EquipmentLocalizedResponse {
+  model: {
+    _id: string;
+    categories: Array<{ _id: string; name: LocalizedText }>;
+    title: LocalizedText;
+    description: LocalizedText;
+    pricePerDay: number;
+    currency?: string;
+    size?: LocalizedText;
+    images: string[];
+  };
   units: EquipmentUnitItem[];
 }
 
@@ -21,19 +34,26 @@ interface EditableImage {
   file?: File;
 }
 
+type Locale = "be" | "en" | "pl";
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+
 export default function AdminEditEquipmentForm() {
+  const { i18n } = useTranslation();
   const { modelId } = useParams<{ modelId: string }>();
   const navigate = useNavigate();
   const { get, put, post, del, loading, error } = useApi();
+  const adminToken = useSelector((state: RootState) => state.auth.token);
   const [model, setModel] = useState<EquipmentModelItem | null>(null);
   const [units, setUnits] = useState<EquipmentUnitItem[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([""]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [pricePerDay, setPricePerDay] = useState<string>("");
   const [currency, setCurrency] = useState("EUR");
-  const [size, setSize] = useState("");
+  const [size, setSize] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [images, setImages] = useState<EditableImage[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
   const normalizedPricePerDay = Number.parseFloat(pricePerDay.replace(",", "."));
@@ -47,17 +67,31 @@ export default function AdminEditEquipmentForm() {
   };
 
   const refresh = () => {
-    get<EquipmentDetailsResponse>(`/equipment/${modelId}`).then((data) => {
+    get<EquipmentLocalizedResponse>(`/admin/equipment/${modelId}/localized`).then((data) => {
       if (!data) return;
-      setModel(data.model);
+      const modelForList: EquipmentModelItem = {
+        _id: data.model._id,
+        categories: data.model.categories.map((c) => ({ _id: c._id, name: c.name[i18n.language as Locale] ?? c.name.be ?? "" })),
+        categoryDisplay: data.model.categories.map((c) => c.name[i18n.language as Locale] ?? c.name.be ?? "").join(", "),
+        title: data.model.title[i18n.language as Locale] ?? data.model.title.be ?? "",
+        description: data.model.description[i18n.language as Locale] ?? data.model.description.be ?? "",
+        pricePerDay: data.model.pricePerDay,
+        currency: data.model.currency,
+        size: (data.model.size?.[i18n.language as Locale] ?? data.model.size?.be ?? ""),
+        images: data.model.images,
+        active: true,
+        createdAt: "",
+        updatedAt: ""
+      };
+      setModel(modelForList);
       setUnits(data.units);
       const ids = (data.model.categories ?? []).map((c) => c._id).filter(Boolean);
       setCategoryIds(ids.length > 0 ? ids : [""]);
-      setTitle(data.model.title);
-      setDescription(data.model.description);
+      setTitle(data.model.title ?? { ...EMPTY_LOCALIZED });
+      setDescription(data.model.description ?? { ...EMPTY_LOCALIZED });
       setPricePerDay(String(data.model.pricePerDay ?? ""));
       setCurrency(data.model.currency ?? "PLN");
-      setSize(data.model.size ?? "");
+      setSize(data.model.size ?? { ...EMPTY_LOCALIZED });
       setImages(
         (data.model.images ?? []).map((path, index) => ({
           id: `existing-${index}-${path}`,
@@ -74,7 +108,7 @@ export default function AdminEditEquipmentForm() {
 
   useEffect(() => {
     refresh();
-  }, [modelId]);
+  }, [modelId, i18n.language]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -155,7 +189,43 @@ export default function AdminEditEquipmentForm() {
     if (!model) return;
     if (!window.confirm("Delete this equipment model and units?")) return;
     const res = await del(`/equipment/${model._id}`);
-    if (res) navigate("/admin/equipment/create");
+    if (res) navigate(addLangToPath("/admin/equipment/create", i18n.language));
+  };
+
+  const setLocalizedValue = (setter: React.Dispatch<React.SetStateAction<LocalizedText>>, value: string) => {
+    setter((prev) => ({ ...prev, [activeLocale]: value }));
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!adminToken) {
+      setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
+      return;
+    }
+    if (!title.be.trim() && !description.be.trim() && !size.be.trim()) {
+      setFeedback({ severity: "error", message: "Fill Belarusian fields first before translating." });
+      return;
+    }
+    const result = await post<{ en: Record<string, string>; pl: Record<string, string> }>(
+      "/admin/translate-localized",
+      {
+        entity: "equipment",
+        source: {
+          title: title.be,
+          description: description.be,
+          size: size.be
+        }
+      },
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (!result) {
+      setFeedback({ severity: "error", message: "AI translation failed. Please try again." });
+      return;
+    }
+    setTitle((prev) => ({ ...prev, en: result.en.title ?? "", pl: result.pl.title ?? "" }));
+    setDescription((prev) => ({ ...prev, en: result.en.description ?? "", pl: result.pl.description ?? "" }));
+    setSize((prev) => ({ ...prev, en: result.en.size ?? "", pl: result.pl.size ?? "" }));
+    setActiveLocale("en");
+    setFeedback({ severity: "success", message: "AI translations filled for EN and PL. Please review before saving." });
   };
 
   const handleRemoveImage = (index: number) => {
@@ -197,13 +267,27 @@ export default function AdminEditEquipmentForm() {
 
       <Stack spacing={1.5}>
         <CategoryMultiField value={categoryIds} onChange={setCategoryIds} categories={allCategories} disabled={loading} />
-        <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <ButtonGroup size="small" variant="outlined">
+          {LOCALES.map((locale) => (
+            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+              {locale.toUpperCase()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
+          Use AI to translate the content
+        </Button>
         <TextField
-          label="Description"
+          label={`Title (${activeLocale.toUpperCase()})`}
+          value={title[activeLocale]}
+          onChange={(e) => setLocalizedValue(setTitle, e.target.value)}
+        />
+        <TextField
+          label={`Description (${activeLocale.toUpperCase()})`}
           multiline
           minRows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={description[activeLocale]}
+          onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
         />
         <TextField
           type="text"
@@ -215,7 +299,11 @@ export default function AdminEditEquipmentForm() {
           inputProps={{ inputMode: "decimal" }}
         />
         <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
-        <TextField label="Size (optional)" value={size} onChange={(e) => setSize(e.target.value)} />
+        <TextField
+          label={`Size (optional) (${activeLocale.toUpperCase()})`}
+          value={size[activeLocale]}
+          onChange={(e) => setLocalizedValue(setSize, e.target.value)}
+        />
         <Typography variant="subtitle2">Images:</Typography>
         <SortableImageList
           images={images.map((item) => item.previewUrl)}

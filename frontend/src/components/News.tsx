@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { AppDispatch, RootState } from "../store/store";
 
 export default function News() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
 
   const news = useSelector((state: RootState) => state.news.items);
@@ -24,18 +24,20 @@ export default function News() {
   const currentPageLoading = !!loadingPages[page];
 
   useEffect(() => {
-    if (pages[page]) {
-      dispatch(setNewsFromCache(page));
+    const key = `${i18n.language}:${page}`;
+    if (pages[key]) {
+      dispatch(setNewsFromCache({ page, lang: i18n.language }));
       return;
     }
-    dispatch(fetchNews({ page, limit: 4 }));
-  }, [dispatch, page, pages]);
+    dispatch(fetchNews({ page, limit: 4, lang: i18n.language }));
+  }, [dispatch, page, pages, i18n.language]);
 
   useEffect(() => {
     const nextPage = page + 1;
-    if (!totalPages || nextPage > totalPages || pages[nextPage] || loadingPages[nextPage]) return;
-    dispatch(fetchNews({ page: nextPage, limit: 4, silent: true }));
-  }, [dispatch, page, totalPages, pages, loadingPages]);
+    const key = `${i18n.language}:${nextPage}`;
+    if (!totalPages || nextPage > totalPages || pages[key] || loadingPages[key]) return;
+    dispatch(fetchNews({ page: nextPage, limit: 4, silent: true, lang: i18n.language }));
+  }, [dispatch, page, totalPages, pages, loadingPages, i18n.language]);
 
   if (error && news.length === 0) return <p>Error: {error}</p>;
 

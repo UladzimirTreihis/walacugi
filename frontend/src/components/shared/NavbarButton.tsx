@@ -1,6 +1,8 @@
 import { Button, type ButtonProps } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import React from "react";
+import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../../utils/langUrl";
 
 interface Props extends ButtonProps {
   scrollToId?: string;
@@ -10,13 +12,15 @@ interface Props extends ButtonProps {
 const NavbarButton: React.FC<Props> = ({ children, scrollToId, to, ...props }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const toWithLang = addLangToPath(to, i18n.language);
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (scrollToId) {
       event.preventDefault();
 
       if (location.pathname !== "/") {
-        navigate("/", { replace: false });
+        navigate(addLangToPath("/", i18n.language), { replace: false });
         setTimeout(() => {
           const element = document.getElementById(scrollToId);
           if (element) {
@@ -35,7 +39,7 @@ const NavbarButton: React.FC<Props> = ({ children, scrollToId, to, ...props }) =
   return (
     <Button
       component={RouterLink}
-      to={to}
+      to={toWithLang}
       onClick={scrollToId ? handleClick : undefined}
       {...props}
       sx={{

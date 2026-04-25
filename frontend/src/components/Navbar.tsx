@@ -5,6 +5,7 @@ import NavbarButton from "./shared/NavbarButton";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/store";
+import { addLangToPath } from "../utils/langUrl";
 
 function Navbar() {
   const { t, i18n } = useTranslation();
@@ -23,7 +24,7 @@ function Navbar() {
         <NavbarButton component={Link} variant="contained" to={"/equipment"}>{t("equipment.title")}</NavbarButton>
         <Button
           component={Link}
-          to="/cart"
+          to={addLangToPath("/cart", i18n.language)}
           color="inherit"
           sx={{ minWidth: "auto", px: 1.2, mr: 3, position: "relative", fontSize: 20, lineHeight: 1 }}
           aria-label={t("cart.title")}
@@ -53,7 +54,7 @@ function Navbar() {
           )}
         </Button>
         {adminToken  
-        ? <NavbarButton component={Link} variant="contained" to={"/admin"}>{t("admin")}</NavbarButton>
+        ? <NavbarButton component={Link} variant="contained" to={addLangToPath("/admin", i18n.language)}>{t("admin")}</NavbarButton>
         : ""
         }
 

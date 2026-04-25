@@ -11,7 +11,7 @@ import formatDateEU from "../utils/formatDateEU";
 import { useTranslation } from "react-i18next";
 
 export default function EventFull() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const dispatch = useDispatch();
   const eventsList = useSelector((state: RootState) => state.events.items);
@@ -20,11 +20,9 @@ export default function EventFull() {
   const event = eventsList.find((item) => item._id === eventId);
 
   useEffect(() => {
-    if (!event) {
-      // @ts-expect-error thunk typing
-      dispatch(fetchEvents());
-    }
-  }, [dispatch, event]);
+    // @ts-expect-error thunk typing
+    dispatch(fetchEvents(i18n.language));
+  }, [dispatch, i18n.language]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

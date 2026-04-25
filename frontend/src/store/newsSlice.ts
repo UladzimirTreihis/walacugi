@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import type { NewsItem } from "../types";
+import { normalizeLang } from "../utils/langUrl";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -11,8 +12,9 @@ interface NewsState {
   limit: number;
   totalItems: number;
   totalPages: number;
-  pages: Record<number, NewsItem[]>;
-  loadingPages: Record<number, boolean>;
+  pages: Record<string, NewsItem[]>;
+  loadingPages: Record<string, boolean>;
+  lang: string;
 }
 
 const initialState: NewsState = {
@@ -24,13 +26,15 @@ const initialState: NewsState = {
   totalItems: 0,
   totalPages: 1,
   pages: {},
-  loadingPages: {}
+  loadingPages: {},
+  lang: "be"
 };
 
 export interface FetchNewsArgs {
   page?: number;
   limit?: number;
   silent?: boolean;
+  lang?: string;
 }
 
 export interface NewsPageResponse {
@@ -46,7 +50,8 @@ export const fetchNews = createAsyncThunk<NewsPageResponse, FetchNewsArgs | unde
   async (args) => {
     const page = args?.page ?? 1;
     const limit = args?.limit ?? 4;
-    const response = await fetch(`${API_URL}/news?page=${page}&limit=${limit}`);
+    const lang = normalizeLang(args?.lang ?? null) ?? "be";
+    const response = await fetch(`${API_URL}/news?page=${page}&limit=${limit}&lang=${lang}`);
   if (!response.ok) {
     throw new Error("Failed to fetch news");
   }
@@ -64,13 +69,16 @@ const newsSlice = createSlice({
       state.limit = action.payload.limit;
       state.totalItems = action.payload.totalItems;
       state.totalPages = action.payload.totalPages;
-      state.pages[action.payload.page] = action.payload.items;
+      const key = `${state.lang}:${action.payload.page}`;
+      state.pages[key] = action.payload.items;
     },
-    setNewsFromCache: (state, action: PayloadAction<number>) => {
-      const cachedItems = state.pages[action.payload];
+    setNewsFromCache: (state, action: PayloadAction<{ page: number; lang: string }>) => {
+      const key = `${action.payload.lang}:${action.payload.page}`;
+      const cachedItems = state.pages[key];
       if (!cachedItems) return;
       state.items = cachedItems;
-      state.page = action.payload;
+      state.page = action.payload.page;
+      state.lang = action.payload.lang;
     },
     deleteNews: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter((news) => news._id !== action.payload);
@@ -84,27 +92,34 @@ const newsSlice = createSlice({
     builder
       .addCase(fetchNews.pending, (state, action) => {
         const page = action.meta.arg?.page ?? 1;
+        const lang = normalizeLang(action.meta.arg?.lang ?? null) ?? "be";
+        const key = `${lang}:${page}`;
         const isSilent = !!action.meta.arg?.silent;
         state.error = null;
-        state.loadingPages[page] = true;
+        state.loadingPages[key] = true;
         if (!isSilent) {
           state.loading = true;
         }
       })
       .addCase(fetchNews.fulfilled, (state, action) => {
         const page = action.payload.page;
-        state.loadingPages[page] = false;
+        const lang = normalizeLang(action.meta.arg?.lang ?? null) ?? "be";
+        const key = `${lang}:${page}`;
+        state.loadingPages[key] = false;
         state.loading = false;
         state.items = action.payload.items;
         state.page = action.payload.page;
+        state.lang = lang;
         state.limit = action.payload.limit;
         state.totalItems = action.payload.totalItems;
         state.totalPages = action.payload.totalPages;
-        state.pages[action.payload.page] = action.payload.items;
+        state.pages[key] = action.payload.items;
       })
       .addCase(fetchNews.rejected, (state, action) => {
         const page = action.meta.arg?.page ?? 1;
-        state.loadingPages[page] = false;
+        const lang = normalizeLang(action.meta.arg?.lang ?? null) ?? "be";
+        const key = `${lang}:${page}`;
+        state.loadingPages[key] = false;
         state.loading = false;
         state.error = action.error.message ?? "Unknown error";
       });

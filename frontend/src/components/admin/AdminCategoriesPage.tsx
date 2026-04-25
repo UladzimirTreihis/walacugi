@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  ButtonGroup,
   CircularProgress,
   IconButton,
   Stack,
@@ -14,22 +15,31 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import useApi from "../../hooks/useApi";
-import type { CategoryItem } from "../../types";
+import type { CategoryItem, CategoryLocalizedItem, LocalizedText } from "../../types";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { useTranslation } from "react-i18next";
+
+type Locale = "be" | "en" | "pl";
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
 
 export default function AdminCategoriesPage() {
   const { t } = useTranslation();
   const { get, post, put, del, loading, error } = useApi();
   const [items, setItems] = useState<CategoryItem[]>([]);
-  const [newName, setNewName] = useState("");
+  const [itemsLocalized, setItemsLocalized] = useState<CategoryLocalizedItem[]>([]);
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [newName, setNewName] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
+  const [editName, setEditName] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   const refresh = () => {
     get<CategoryItem[]>("/equipment/categories").then((data) => {
       if (data) setItems(data);
+    });
+    get<CategoryLocalizedItem[]>("/admin/categories/localized").then((data) => {
+      if (data) setItemsLocalized(data);
     });
   };
 
@@ -39,11 +49,10 @@ export default function AdminCategoriesPage() {
 
   const handleAdd = async () => {
     setFeedback(null);
-    const name = newName.trim();
-    if (!name) return;
-    const res = await post<CategoryItem>("/equipment/categories", { name });
+    if (!newName.be.trim()) return;
+    const res = await post<CategoryItem>("/equipment/categories", { name: newName });
     if (res) {
-      setNewName("");
+      setNewName({ ...EMPTY_LOCALIZED });
       setFeedback({ severity: "success", message: t("admin_page.category_created") });
       refresh();
     } else {
@@ -52,25 +61,25 @@ export default function AdminCategoriesPage() {
   };
 
   const startEdit = (c: CategoryItem) => {
+    const localized = itemsLocalized.find((item) => item._id === c._id);
     setEditingId(c._id);
-    setEditName(c.name);
+    setEditName(localized?.name ?? { ...EMPTY_LOCALIZED });
     setFeedback(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditName("");
+    setEditName({ ...EMPTY_LOCALIZED });
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
     setFeedback(null);
-    const name = editName.trim();
-    if (!name) return;
-    const res = await put<CategoryItem>(`/equipment/categories/${editingId}`, { name });
+    if (!editName.be.trim()) return;
+    const res = await put<CategoryItem>(`/equipment/categories/${editingId}`, { name: editName });
     if (res) {
       setEditingId(null);
-      setEditName("");
+      setEditName({ ...EMPTY_LOCALIZED });
       setFeedback({ severity: "success", message: t("admin_page.category_updated") });
       refresh();
     } else {
@@ -109,15 +118,22 @@ export default function AdminCategoriesPage() {
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
         {t("admin_page.categories_add_new")}
       </Typography>
+      <ButtonGroup size="small" variant="outlined" sx={{ mb: 1 }}>
+        {LOCALES.map((locale) => (
+          <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+            {locale.toUpperCase()}
+          </Button>
+        ))}
+      </ButtonGroup>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 3 }}>
         <TextField
-          label={t("admin_page.category_name")}
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          label={`${t("admin_page.category_name")} (${activeLocale.toUpperCase()})`}
+          value={newName[activeLocale]}
+          onChange={(e) => setNewName((prev) => ({ ...prev, [activeLocale]: e.target.value }))}
           fullWidth
           size="small"
         />
-        <Button variant="contained" onClick={handleAdd} disabled={loading || !newName.trim()}>
+        <Button variant="contained" onClick={handleAdd} disabled={loading || !newName.be.trim()}>
           {loading ? <CircularProgress size={22} /> : t("admin_page.category_add")}
         </Button>
       </Stack>
@@ -141,7 +157,12 @@ export default function AdminCategoriesPage() {
           >
             {editingId === c._id ? (
               <>
-                <TextField size="small" value={editName} onChange={(e) => setEditName(e.target.value)} fullWidth />
+                <TextField
+                  size="small"
+                  value={editName[activeLocale]}
+                  onChange={(e) => setEditName((prev) => ({ ...prev, [activeLocale]: e.target.value }))}
+                  fullWidth
+                />
                 <IconButton aria-label={t("admin_page.save")} onClick={saveEdit} color="primary">
                   <CheckIcon />
                 </IconButton>

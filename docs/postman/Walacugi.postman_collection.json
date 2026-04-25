@@ -74,6 +74,66 @@
               ]
             }
           }
+        },
+        {
+          "name": "Translate localized (AI) - News",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"news\",\n  \"source\": {\n    \"title\": \"Вандроўка ў горы\",\n    \"description\": \"<p>Прывітанне 😊 <b>Тэст</b> <a href='https://example.com'>спасылка</a></p>\",\n    \"location\": \"Беласток\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/translate-localized",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "translate-localized"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Translate localized (AI) - Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity\": \"event\",\n  \"source\": {\n    \"title\": \"Тэставы івент\",\n    \"description\": \"<p>Апісанне з <b>HTML</b> і 😊</p>\",\n    \"location\": \"Гродна\",\n    \"approxDate\": \"Канец траўня\",\n    \"ageRestriction\": \"18+\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/translate-localized",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "translate-localized"
+              ]
+            }
+          }
         }
       ]
     },

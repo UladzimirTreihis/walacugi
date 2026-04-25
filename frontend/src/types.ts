@@ -39,6 +39,19 @@ export interface CategoryItem {
   updatedAt?: string;
 }
 
+export interface LocalizedText {
+  be: string;
+  en: string;
+  pl: string;
+}
+
+export interface CategoryLocalizedItem {
+  _id: string;
+  name: LocalizedText;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface EquipmentModelItem {
   _id: string;
   categories: CategoryItem[];

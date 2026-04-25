@@ -12,8 +12,11 @@ import PinnedChip from "./shared/chips/PinnedChip";
 import LocationPinChip from "./shared/chips/LocationPinChip";
 import CountryFlagChip from "./shared/chips/CountryFlagChip";
 import CalendarDateChip from "./shared/chips/CalendarDateChip";
+import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../utils/langUrl";
 
 export default function SimpleNews({ data }: { data: NewsItem }) {
+  const { i18n } = useTranslation();
   const { _id, images, title } = data;
   const adminToken = useSelector((state: RootState) => state.auth.token); 
   const isAdmin = !!adminToken
@@ -38,7 +41,7 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
   return (
     <Card
       component={Link}
-      to={`/news/${_id}`}
+      to={addLangToPath(`/news/${_id}`, i18n.language)}
       sx={{
         textDecoration: "none",
         borderRadius: 2, 
@@ -108,7 +111,7 @@ export default function SimpleNews({ data }: { data: NewsItem }) {
               variant="outlined"
               color="primary"
               component={Link}
-              to={`/admin/news/edit/${data._id}`}
+              to={addLangToPath(`/admin/news/edit/${data._id}`, i18n.language)}
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
