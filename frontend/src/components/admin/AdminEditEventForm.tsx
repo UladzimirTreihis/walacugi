@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import SortableImageList from "./SortableImageList";
@@ -22,23 +22,29 @@ interface EditableImage {
   file?: File;
 }
 
+type Locale = "be" | "en" | "pl";
+type LocalizedText = Record<Locale, string>;
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+
 export default function AdminEditEventForm() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { get, put, post, loading, error } = useApi();
   const adminToken = useSelector((state: RootState) => state.auth.token);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [budget, setBudget] = useState("");
   const [currency, setCurrency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [datedAt, setDatedAt] = useState("");
-  const [approxDate, setApproxDate] = useState("");
+  const [approxDate, setApproxDate] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [countries, setCountries] = useState<string[]>([]);
-  const [location, setLocation] = useState("");
-  const [ageRestriction, setAgeRestriction] = useState("");
+  const [location, setLocation] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [ageRestriction, setAgeRestriction] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
   const [pinned, setPinned] = useState(false);
@@ -50,20 +56,20 @@ export default function AdminEditEventForm() {
       navigate("/admin/login");
       return;
     }
-    get(`/events/${eventId}`, { Authorization: `Bearer ${adminToken}` })
+    get(`/admin/events/${eventId}/localized`, { Authorization: `Bearer ${adminToken}` })
       .then((data: any) => {
         if (data) {
-          setTitle(data.title || "");
-          setDescription(data.description || "");
+          setTitle(data.title || { ...EMPTY_LOCALIZED });
+          setDescription(data.description || { ...EMPTY_LOCALIZED });
           setBudget(data.budget || "");
           setCurrency(data.currency || "");
           setStartDate(data.startDate ? isoDateToDisplay(String(data.startDate).slice(0, 10)) : "");
           setEndDate(data.endDate ? isoDateToDisplay(String(data.endDate).slice(0, 10)) : "");
           setDatedAt(data.datedAt ? isoDateToDisplay(String(data.datedAt).slice(0, 10)) : "");
-          setApproxDate(data.approxDate || "");
+          setApproxDate(data.approxDate || { ...EMPTY_LOCALIZED });
           setCountries(data.countries || []);
-          setLocation(data.location || "");
-          setAgeRestriction(data.ageRestriction || "");
+          setLocation(data.location || { ...EMPTY_LOCALIZED });
+          setAgeRestriction(data.ageRestriction || { ...EMPTY_LOCALIZED });
           setChatLink(data.chatLink || "");
           setDifficultyLevel(data.difficultyLevel || 3);
           setImages(
@@ -95,6 +101,13 @@ export default function AdminEditEventForm() {
     setFeedback(null);
     try {
       if (!adminToken) {
+        return;
+      }
+      if (!title.be.trim()) {
+        setFeedback({
+          severity: "error",
+          message: "Belarusian title is required."
+        });
         return;
       }
       const newImages = images.filter((item) => item.file);
@@ -175,6 +188,52 @@ export default function AdminEditEventForm() {
   const hasDatedAtError = datedAt.trim().length > 0 && !displayDateToIso(datedAt);
   const isDateRequirementUnmet = !(displayDateToIso(startDate) || displayDateToIso(datedAt));
 
+  const setLocalizedValue = (setter: React.Dispatch<React.SetStateAction<LocalizedText>>, value: string) => {
+    setter((prev) => ({ ...prev, [activeLocale]: value }));
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!adminToken) {
+      setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
+      return;
+    }
+    if (
+      !title.be.trim() &&
+      !description.be.trim() &&
+      !location.be.trim() &&
+      !approxDate.be.trim() &&
+      !ageRestriction.be.trim()
+    ) {
+      setFeedback({ severity: "error", message: "Fill Belarusian fields first before translating." });
+      return;
+    }
+    const result = await post<{ en: Record<string, string>; pl: Record<string, string> }>(
+      "/admin/translate-localized",
+      {
+        entity: "event",
+        source: {
+          title: title.be,
+          description: description.be,
+          location: location.be,
+          approxDate: approxDate.be,
+          ageRestriction: ageRestriction.be
+        }
+      },
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (!result) {
+      setFeedback({ severity: "error", message: "AI translation failed. Please try again." });
+      return;
+    }
+    setTitle((prev) => ({ ...prev, en: result.en.title ?? "", pl: result.pl.title ?? "" }));
+    setDescription((prev) => ({ ...prev, en: result.en.description ?? "", pl: result.pl.description ?? "" }));
+    setLocation((prev) => ({ ...prev, en: result.en.location ?? "", pl: result.pl.location ?? "" }));
+    setApproxDate((prev) => ({ ...prev, en: result.en.approxDate ?? "", pl: result.pl.approxDate ?? "" }));
+    setAgeRestriction((prev) => ({ ...prev, en: result.en.ageRestriction ?? "", pl: result.pl.ageRestriction ?? "" }));
+    setActiveLocale("en");
+    setFeedback({ severity: "success", message: "AI translations filled for EN and PL. Please review before saving." });
+  };
+
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -193,8 +252,32 @@ export default function AdminEditEventForm() {
         </Alert>
       )}
 
-      <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
-      <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} margin="normal" />
+      <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+        <ButtonGroup size="small" variant="outlined">
+          {LOCALES.map((locale) => (
+            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+              {locale.toUpperCase()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
+          Use AI to translate the content
+        </Button>
+      </Box>
+      <TextField
+        fullWidth
+        label={`Title (${activeLocale.toUpperCase()})`}
+        value={title[activeLocale]}
+        onChange={(e) => setLocalizedValue(setTitle, e.target.value)}
+        margin="normal"
+      />
+      <TextField
+        fullWidth
+        label={`Location (${activeLocale.toUpperCase()})`}
+        value={location[activeLocale]}
+        onChange={(e) => setLocalizedValue(setLocation, e.target.value)}
+        margin="normal"
+      />
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
         <TextField label="Budget (ex: 300-500)" value={budget} onChange={(e) => setBudget(e.target.value)} margin="normal" />
         <TextField label="Currency (ex: EUR)" value={currency} onChange={(e) => setCurrency(e.target.value)} margin="normal" />
@@ -234,8 +317,8 @@ export default function AdminEditEventForm() {
       <TextField
         fullWidth
         label="Approx date (if exact dates unknown)"
-        value={approxDate}
-        onChange={(e) => setApproxDate(e.target.value)}
+        value={approxDate[activeLocale]}
+        onChange={(e) => setLocalizedValue(setApproxDate, e.target.value)}
         margin="normal"
       />
       <Autocomplete
@@ -260,8 +343,8 @@ export default function AdminEditEventForm() {
       <TextField
         fullWidth
         label="Age restriction"
-        value={ageRestriction}
-        onChange={(e) => setAgeRestriction(e.target.value)}
+        value={ageRestriction[activeLocale]}
+        onChange={(e) => setLocalizedValue(setAgeRestriction, e.target.value)}
         margin="normal"
       />
       <FormControlLabel
@@ -278,7 +361,16 @@ export default function AdminEditEventForm() {
         onChange={(e) => setDifficultyLevel(Number(e.target.value || 1))}
         margin="normal"
       />
-      <TextField fullWidth label="Description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} margin="normal" />
+      <Typography variant="h6" gutterBottom>{`Description (${activeLocale.toUpperCase()})`}</Typography>
+      <TextField
+        fullWidth
+        label={`Description (${activeLocale.toUpperCase()})`}
+        multiline
+        rows={6}
+        value={description[activeLocale]}
+        onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
+        margin="normal"
+      />
 
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
         Images:

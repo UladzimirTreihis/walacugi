@@ -3,6 +3,7 @@ import { Box, Button, Card, CardContent, CardMedia, IconButton, Typography } fro
 import CloseIcon from "@mui/icons-material/Close";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../../utils/langUrl";
 
 interface ProductCardProps {
   image: string;
@@ -27,7 +28,7 @@ export default function ProductCard({
   viewLabel,
   onRemove
 }: ProductCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -64,7 +65,7 @@ export default function ProductCard({
         )}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: "auto" }}>
           <Typography variant="h6">{priceLabel}</Typography>
-          <Button component={Link} to={viewTo} variant="contained">
+          <Button component={Link} to={addLangToPath(viewTo, i18n.language)} variant="contained">
             {viewLabel ?? t("common.view")}
           </Button>
         </Box>

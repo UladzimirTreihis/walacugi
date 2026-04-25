@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test:booking": "node --test dist/utils/bookingValidation.test.js",
     "seed:equipment": "node dist/scripts/seedEquipment.js",
+    "migrate:localized-content": "node dist/scripts/migrateLocalizedContent.js",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\""
   },

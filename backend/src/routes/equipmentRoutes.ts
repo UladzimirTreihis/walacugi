@@ -10,48 +10,70 @@ import Category from "../models/Category.js";
 import { checkAdminToken } from "../utils/middleware.js";
 import { isValidDateRange, rangesOverlap } from "../utils/bookingValidation.js";
 import { logger } from "../utils/logger.js";
+import { getLocalizedText, getRequestedLang, isLocalizedText, type LocalizedText } from "../utils/localizedFields.js";
 
 const router = Router();
 
-type PopulatedCategory = { _id: mongoose.Types.ObjectId; name: string };
+type PopulatedCategory = { _id: mongoose.Types.ObjectId; name: unknown };
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function notNull<T>(value: T | null): value is T {
+  return value !== null;
+}
+
+function getLocalizedTextWithFallback(value: LocalizedText, lang: ReturnType<typeof getRequestedLang>): string {
+  const preferred = getLocalizedText(value, lang).trim();
+  if (preferred) return preferred;
+  if (value.be.trim()) return value.be.trim();
+  if (value.en.trim()) return value.en.trim();
+  if (value.pl.trim()) return value.pl.trim();
+  return "";
 }
 
 function toEquipmentModelDto(doc: {
   _id: mongoose.Types.ObjectId;
   category?: string;
   categories?: PopulatedCategory[] | mongoose.Types.ObjectId[];
-  title: string;
-  description: string;
+  title: unknown;
+  description: unknown;
   pricePerDay: number;
   currency?: string;
-  size?: string;
+  size?: unknown;
   images: string[];
   active: boolean;
   createdAt: Date;
   updatedAt?: Date;
-}) {
+}, lang: ReturnType<typeof getRequestedLang>) {
   const rawCats = doc.categories;
   const cats: { _id: string; name: string }[] = [];
   if (Array.isArray(rawCats)) {
     for (const c of rawCats) {
-      if (c && typeof c === "object" && "name" in c && typeof (c as PopulatedCategory).name === "string") {
-        cats.push({ _id: String((c as PopulatedCategory)._id), name: (c as PopulatedCategory).name });
+      if (c && typeof c === "object" && "name" in c) {
+        const localizedName = (c as PopulatedCategory).name;
+        if (!isLocalizedText(localizedName)) continue;
+        cats.push({
+          _id: String((c as PopulatedCategory)._id),
+          name: getLocalizedText(localizedName, lang)
+        });
       }
     }
   }
   const categoryDisplay = cats.length > 0 ? cats.map((c) => c.name).join(", ") : (doc.category ?? "");
+  if (!isLocalizedText(doc.title) || !isLocalizedText(doc.description) || !isLocalizedText(doc.size)) {
+    return null;
+  }
   return {
     _id: String(doc._id),
     categories: cats,
     categoryDisplay,
-    title: doc.title,
-    description: doc.description,
+    title: getLocalizedText(doc.title, lang),
+    description: getLocalizedText(doc.description, lang),
     pricePerDay: doc.pricePerDay,
     currency: doc.currency,
-    size: doc.size,
+    size: getLocalizedText(doc.size, lang),
     images: doc.images ?? [],
     active: doc.active,
     createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
@@ -75,7 +97,13 @@ function normalizeCategoryIds(input: unknown): string[] | null {
 
 async function categoryNameTaken(name: string, excludeId?: string) {
   const pattern = new RegExp(`^${escapeRegex(name.trim())}$`, "i");
-  const q: Record<string, unknown> = { name: pattern };
+  const q: Record<string, unknown> = {
+    $or: [
+      { "name.en": pattern },
+      { "name.be": pattern },
+      { "name.pl": pattern }
+    ]
+  };
   if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
     q._id = { $ne: excludeId };
   }
@@ -130,8 +158,19 @@ async function modelIdsWithAvailabilityInRange(
 
 router.get("/categories", async (_req: Request, res: Response) => {
   try {
-    const categories = await Category.find().sort({ name: 1 }).lean();
-    res.json(categories);
+    const lang = getRequestedLang(_req);
+    const categories = await Category.find().lean();
+    const localized = categories
+      .map((category) => {
+        if (!isLocalizedText(category.name)) return null;
+        return {
+          ...category,
+          name: getLocalizedTextWithFallback(category.name, lang)
+        };
+      })
+      .filter(notNull)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    res.json(localized);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -139,17 +178,22 @@ router.get("/categories", async (_req: Request, res: Response) => {
 
 router.post("/categories", checkAdminToken, async (req: Request, res: Response) => {
   try {
-    const name = String(req.body.name ?? "").trim();
-    if (!name) {
-      res.status(400).json({ error: "Name is required" });
+    const lang = getRequestedLang(req);
+    if (!isLocalizedText(req.body.name)) {
+      res.status(400).json({ error: "Name must be a localized object { en, be, pl }" });
       return;
     }
-    if (await categoryNameTaken(name)) {
+    const nameInBe = req.body.name.be.trim();
+    if (!nameInBe) {
+      res.status(400).json({ error: "name.be is required" });
+      return;
+    }
+    if (await categoryNameTaken(nameInBe)) {
       res.status(409).json({ error: "A category with this name already exists" });
       return;
     }
-    const created = await Category.create({ name, updatedAt: new Date() });
-    res.json(created);
+    const created = await Category.create({ name: req.body.name, updatedAt: new Date() });
+    res.json({ ...created.toObject(), name: getLocalizedTextWithFallback(created.name, lang) });
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("duplicate key")) {
@@ -162,30 +206,35 @@ router.post("/categories", checkAdminToken, async (req: Request, res: Response) 
 
 router.put("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response) => {
   try {
+    const lang = getRequestedLang(req);
     const categoryId = String(req.params.categoryId ?? "");
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
       res.status(400).json({ error: "Invalid category id" });
       return;
     }
-    const name = String(req.body.name ?? "").trim();
-    if (!name) {
-      res.status(400).json({ error: "Name is required" });
+    if (!isLocalizedText(req.body.name)) {
+      res.status(400).json({ error: "Name must be a localized object { en, be, pl }" });
       return;
     }
-    if (await categoryNameTaken(name, categoryId)) {
+    const nameInBe = req.body.name.be.trim();
+    if (!nameInBe) {
+      res.status(400).json({ error: "name.be is required" });
+      return;
+    }
+    if (await categoryNameTaken(nameInBe, categoryId)) {
       res.status(409).json({ error: "A category with this name already exists" });
       return;
     }
     const updated = await Category.findByIdAndUpdate(
       categoryId,
-      { name, updatedAt: new Date() },
+      { name: req.body.name, updatedAt: new Date() },
       { new: true }
     );
     if (!updated) {
       res.status(404).json({ error: "Not found" });
       return;
     }
-    res.json(updated);
+    res.json({ ...updated.toObject(), name: getLocalizedTextWithFallback(updated.name, lang) });
   } catch (err) {
     const msg = (err as Error).message;
     if (msg.includes("duplicate key")) {
@@ -221,6 +270,7 @@ router.delete("/categories/:categoryId", checkAdminToken, async (req: Request, r
 
 router.get("/", async (req: Request, res: Response) => {
   try {
+    const lang = getRequestedLang(req);
     const categoryId = String(req.query.categoryId ?? "").trim();
     const fromRaw = String(req.query.from ?? "").trim();
     const toRaw = String(req.query.to ?? "").trim();
@@ -242,7 +292,11 @@ router.get("/", async (req: Request, res: Response) => {
       }
     }
 
-    res.json(models.map((m) => toEquipmentModelDto(m as Parameters<typeof toEquipmentModelDto>[0])));
+    res.json(
+      models
+        .map((m) => toEquipmentModelDto(m as Parameters<typeof toEquipmentModelDto>[0], lang))
+        .filter(notNull)
+    );
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -250,6 +304,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 router.get("/:modelId", async (req: Request, res: Response) => {
   try {
+    const lang = getRequestedLang(req);
     const modelId = String(req.params.modelId ?? "");
     if (!mongoose.Types.ObjectId.isValid(modelId)) {
       res.status(400).json({ error: "Invalid id" });
@@ -261,7 +316,12 @@ router.get("/:modelId", async (req: Request, res: Response) => {
       return;
     }
     const units = await EquipmentUnit.find({ modelId: model._id }).sort({ unitNumber: 1 });
-    res.json({ model: toEquipmentModelDto(model as Parameters<typeof toEquipmentModelDto>[0]), units });
+    const dto = toEquipmentModelDto(model as Parameters<typeof toEquipmentModelDto>[0], lang);
+    if (!dto) {
+      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
+      return;
+    }
+    res.json({ model: dto, units });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -269,6 +329,7 @@ router.get("/:modelId", async (req: Request, res: Response) => {
 
 router.post("/", checkAdminToken, async (req: Request, res: Response) => {
   try {
+    const lang = getRequestedLang(req);
     const categoryIds = normalizeCategoryIds(req.body.categories);
     if (!categoryIds) {
       res.status(400).json({ error: "At least one category is required" });
@@ -279,13 +340,17 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
       res.status(400).json({ error: "One or more categories do not exist" });
       return;
     }
+    if (!isLocalizedText(req.body.title) || !isLocalizedText(req.body.description) || !isLocalizedText(req.body.size)) {
+      res.status(400).json({ error: "title, description, and size must be localized objects { en, be, pl }" });
+      return;
+    }
     const payload = {
       categories: categoryIds,
       title: req.body.title,
-      description: req.body.description ?? "",
+      description: req.body.description,
       pricePerDay: Number(req.body.pricePerDay),
       currency: req.body.currency ?? "PLN",
-      size: req.body.size ?? "",
+      size: req.body.size,
       images: Array.isArray(req.body.images) ? req.body.images : [],
       active: req.body.active !== false,
       updatedAt: new Date()
@@ -301,7 +366,16 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
       updatedAt: new Date()
     });
     const populated = await EquipmentModel.findById(created._id).populate("categories", "name").lean();
-    res.json(populated ? toEquipmentModelDto(populated as Parameters<typeof toEquipmentModelDto>[0]) : created);
+    if (!populated) {
+      res.status(500).json({ error: "Unable to fetch created model" });
+      return;
+    }
+    const dto = toEquipmentModelDto(populated as Parameters<typeof toEquipmentModelDto>[0], lang);
+    if (!dto) {
+      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
+      return;
+    }
+    res.json(dto);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -309,6 +383,11 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
 
 router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => {
   try {
+    const lang = getRequestedLang(req);
+    if (!isLocalizedText(req.body.title) || !isLocalizedText(req.body.description) || !isLocalizedText(req.body.size)) {
+      res.status(400).json({ error: "title, description, and size must be localized objects { en, be, pl }" });
+      return;
+    }
     const modelId = String(req.params.modelId ?? "");
     if (!mongoose.Types.ObjectId.isValid(modelId)) {
       res.status(400).json({ error: "Invalid id" });
@@ -329,10 +408,10 @@ router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => 
       {
         categories: categoryIds,
         title: req.body.title,
-        description: req.body.description ?? "",
+        description: req.body.description,
         pricePerDay: Number(req.body.pricePerDay),
         currency: req.body.currency ?? "PLN",
-        size: req.body.size ?? "",
+        size: req.body.size,
         images: Array.isArray(req.body.images) ? req.body.images : [],
         active: req.body.active !== false,
         updatedAt: new Date()
@@ -345,7 +424,12 @@ router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => 
       res.status(404).json({ error: "Not found" });
       return;
     }
-    res.json(toEquipmentModelDto(updated as Parameters<typeof toEquipmentModelDto>[0]));
+    const dto = toEquipmentModelDto(updated as Parameters<typeof toEquipmentModelDto>[0], lang);
+    if (!dto) {
+      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
+      return;
+    }
+    res.json(dto);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

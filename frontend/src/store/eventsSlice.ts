@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import type { EventItem } from "../types";
+import { normalizeLang } from "../utils/langUrl";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -15,8 +16,9 @@ const initialState: EventsState = {
   error: null
 };
 
-export const fetchEvents = createAsyncThunk<EventItem[]>("events/fetchEvents", async () => {
-  const response = await fetch(`${API_URL}/events`);
+export const fetchEvents = createAsyncThunk<EventItem[], string | undefined>("events/fetchEvents", async (langArg) => {
+  const lang = normalizeLang(langArg ?? null) ?? "be";
+  const response = await fetch(`${API_URL}/events?lang=${lang}`);
   if (!response.ok) {
     throw new Error("Failed to fetch events");
   }

@@ -9,8 +9,11 @@ import type { RootState } from "../store/store";
 import type { NewsItem } from "../types";
 import formatDateEU from "../utils/formatDateEU";
 import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
+import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../utils/langUrl";
 
 export default function NewsShort({ data }: { data: NewsItem }) {
+  const { i18n } = useTranslation();
   const { _id, images, title, description } = data;
   const adminToken = useSelector((state: RootState) => state.auth.token); 
   const isAdmin = !!adminToken;
@@ -37,7 +40,7 @@ export default function NewsShort({ data }: { data: NewsItem }) {
   return (
     <Card
       component={Link}
-      to={`/news/${_id}`}
+      to={addLangToPath(`/news/${_id}`, i18n.language)}
       sx={{
         textDecoration: "none",
         borderRadius: 2, 
@@ -101,7 +104,7 @@ export default function NewsShort({ data }: { data: NewsItem }) {
                 variant="outlined"
                 color="primary"
                 component={Link}
-                to={`/admin/news/edit/${data._id}`}
+                to={addLangToPath(`/admin/news/edit/${data._id}`, i18n.language)}
                 sx={{ mt: 1 }}
               >
                 Edit

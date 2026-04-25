@@ -36,7 +36,14 @@ export default function useApi() {
         options.body = isFormData ? (body as FormData) : JSON.stringify(body);
       }
 
-      const response = await fetch(`${API_URL}${endpoint}`, options);
+      const url = new URL(`${API_URL}${endpoint}`);
+      const browserParams = new URLSearchParams(window.location.search);
+      const lang = browserParams.get("lang") || window.localStorage.getItem("walacugi.lang");
+      if (lang && !url.searchParams.has("lang")) {
+        url.searchParams.set("lang", lang);
+      }
+
+      const response = await fetch(url.toString(), options);
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }

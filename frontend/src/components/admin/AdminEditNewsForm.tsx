@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import { COUNTRY_OPTIONS, COUNTRY_BY_CODE, countryMatchesQuery, getFlagEmoji } from "../../constants/countries";
@@ -17,17 +17,23 @@ interface EditableImage {
   file?: File;
 }
 
+type Locale = "be" | "en" | "pl";
+type LocalizedText = Record<Locale, string>;
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+
 export default function AdminEditNewsForm() {
   const { newsId } = useParams<{ newsId: string }>();
   const navigate = useNavigate();
   const { get, put, post, loading, error } = useApi();
   const adminToken = useSelector((state: RootState) => state.auth.token);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [datedAt, setDatedAt] = useState("");
   const [pinned, setPinned] = useState(false);
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [countries, setCountries] = useState<string[]>([]);
   const [images, setImages] = useState<EditableImage[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
@@ -37,14 +43,14 @@ export default function AdminEditNewsForm() {
       navigate("/admin/login");
       return;
     }
-    get(`/news/${newsId}`, { Authorization: `Bearer ${adminToken}` })
+    get(`/admin/news/${newsId}/localized`, { Authorization: `Bearer ${adminToken}` })
       .then((data: any) => {
         if (data) {
-          setTitle(data.title || "");
-          setDescription(data.description || "");
+          setTitle(data.title || { ...EMPTY_LOCALIZED });
+          setDescription(data.description || { ...EMPTY_LOCALIZED });
           setDatedAt(data.datedAt ? isoDateToDisplay(String(data.datedAt).slice(0, 10)) : "");
           setPinned(Boolean(data.pinned));
-          setLocation(data.location || "");
+          setLocation(data.location || { ...EMPTY_LOCALIZED });
           setCountries(data.countries || []);
           setImages(
             (data.images || []).map((path: string, index: number) => ({
@@ -74,6 +80,13 @@ export default function AdminEditNewsForm() {
     setFeedback(null);
     try {
       if (!adminToken) {
+        return;
+      }
+      if (!title.be.trim() || !description.be.trim()) {
+        setFeedback({
+          severity: "error",
+          message: "Belarusian title and description are required."
+        });
         return;
       }
       const newImages = images.filter((item) => item.file);
@@ -141,6 +154,42 @@ export default function AdminEditNewsForm() {
   }
   const hasDatedAtError = datedAt.trim().length > 0 && !displayDateToIso(datedAt);
 
+  const setLocalizedValue = (setter: React.Dispatch<React.SetStateAction<LocalizedText>>, value: string) => {
+    setter((prev) => ({ ...prev, [activeLocale]: value }));
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!adminToken) {
+      setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
+      return;
+    }
+    if (!title.be.trim() && !description.be.trim() && !location.be.trim()) {
+      setFeedback({ severity: "error", message: "Fill Belarusian fields first before translating." });
+      return;
+    }
+    const result = await post<{ en: Record<string, string>; pl: Record<string, string> }>(
+      "/admin/translate-localized",
+      {
+        entity: "news",
+        source: {
+          title: title.be,
+          description: description.be,
+          location: location.be
+        }
+      },
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (!result) {
+      setFeedback({ severity: "error", message: "AI translation failed. Please try again." });
+      return;
+    }
+    setTitle((prev) => ({ ...prev, en: result.en.title ?? "", pl: result.pl.title ?? "" }));
+    setDescription((prev) => ({ ...prev, en: result.en.description ?? "", pl: result.pl.description ?? "" }));
+    setLocation((prev) => ({ ...prev, en: result.en.location ?? "", pl: result.pl.location ?? "" }));
+    setActiveLocale("en");
+    setFeedback({ severity: "success", message: "AI translations filled for EN and PL. Please review before saving." });
+  };
+
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -159,7 +208,25 @@ export default function AdminEditNewsForm() {
         </Alert>
       )}
 
-      <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
+      <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+        <ButtonGroup size="small" variant="outlined">
+          {LOCALES.map((locale) => (
+            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+              {locale.toUpperCase()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
+          Use AI to translate the content
+        </Button>
+      </Box>
+      <TextField
+        fullWidth
+        label={`Title (${activeLocale.toUpperCase()})`}
+        value={title[activeLocale]}
+        onChange={(e) => setLocalizedValue(setTitle, e.target.value)}
+        margin="normal"
+      />
       <TextField
         fullWidth
         label="Dated at"
@@ -175,7 +242,13 @@ export default function AdminEditNewsForm() {
         control={<Switch checked={pinned} onChange={(e) => setPinned(e.target.checked)} />}
         label="Pinned"
       />
-      <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} margin="normal" />
+      <TextField
+        fullWidth
+        label={`Location (${activeLocale.toUpperCase()})`}
+        value={location[activeLocale]}
+        onChange={(e) => setLocalizedValue(setLocation, e.target.value)}
+        margin="normal"
+      />
       <Autocomplete
         multiple
         options={COUNTRY_OPTIONS}
@@ -190,7 +263,15 @@ export default function AdminEditNewsForm() {
           <TextField {...params} label="Countries" margin="normal" placeholder="Type country name, code, or alias" />
         )}
       />
-      <TextField fullWidth label="Description" multiline rows={4} value={description} onChange={(e) => setDescription(e.target.value)} margin="normal" />
+      <Typography variant="h6" gutterBottom>{`Description (${activeLocale.toUpperCase()})`}</Typography>
+      <TextField
+        fullWidth
+        multiline
+        rows={6}
+        value={description[activeLocale]}
+        onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
+        margin="normal"
+      />
 
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
         Images:

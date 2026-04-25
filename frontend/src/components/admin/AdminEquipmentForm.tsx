@@ -1,23 +1,34 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import useApi from "../../hooks/useApi";
-import type { CategoryItem, EquipmentModelItem } from "../../types";
+import type { CategoryItem, EquipmentModelItem, LocalizedText } from "../../types";
 import SortableImageList from "./SortableImageList";
 import CategoryMultiField from "./CategoryMultiField";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
+import { useTranslation } from "react-i18next";
+import { addLangToPath } from "../../utils/langUrl";
+import type { RootState } from "../../store/store";
+
+type Locale = "be" | "en" | "pl";
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
 
 export default function AdminEquipmentForm() {
+  const { i18n } = useTranslation();
   const { post, get, loading, error } = useApi();
+  const adminToken = useSelector((state: RootState) => state.auth.token);
   const [items, setItems] = useState<EquipmentModelItem[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([""]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [pricePerDay, setPricePerDay] = useState<number>(0);
   const [currency, setCurrency] = useState("EUR");
-  const [size, setSize] = useState("");
+  const [size, setSize] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
@@ -67,7 +78,11 @@ export default function AdminEquipmentForm() {
   }, []);
 
   const selectedCategoryIds = categoryIds.filter(Boolean);
-  const canCreate = selectedCategoryIds.length > 0 && Boolean(title.trim());
+  const canCreate = selectedCategoryIds.length > 0 && Boolean(title.be.trim());
+
+  const setLocalizedValue = (setter: React.Dispatch<React.SetStateAction<LocalizedText>>, value: string) => {
+    setter((prev) => ({ ...prev, [activeLocale]: value }));
+  };
 
   const handleCreate = async () => {
     setFeedback(null);
@@ -91,11 +106,11 @@ export default function AdminEquipmentForm() {
         return;
       }
       setCategoryIds([""]);
-      setTitle("");
-      setDescription("");
+      setTitle({ ...EMPTY_LOCALIZED });
+      setDescription({ ...EMPTY_LOCALIZED });
       setPricePerDay(0);
       setCurrency("EUR");
-      setSize("");
+      setSize({ ...EMPTY_LOCALIZED });
       setSelectedFiles([]);
       setImagePreviews([]);
       setFeedback({ severity: "success", message: "Equipment model created successfully." });
@@ -106,6 +121,38 @@ export default function AdminEquipmentForm() {
         message: "Something went wrong while creating equipment. Please try again."
       });
     }
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!adminToken) {
+      setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
+      return;
+    }
+    if (!title.be.trim() && !description.be.trim() && !size.be.trim()) {
+      setFeedback({ severity: "error", message: "Fill Belarusian fields first before translating." });
+      return;
+    }
+    const result = await post<{ en: Record<string, string>; pl: Record<string, string> }>(
+      "/admin/translate-localized",
+      {
+        entity: "equipment",
+        source: {
+          title: title.be,
+          description: description.be,
+          size: size.be
+        }
+      },
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (!result) {
+      setFeedback({ severity: "error", message: "AI translation failed. Please try again." });
+      return;
+    }
+    setTitle((prev) => ({ ...prev, en: result.en.title ?? "", pl: result.pl.title ?? "" }));
+    setDescription((prev) => ({ ...prev, en: result.en.description ?? "", pl: result.pl.description ?? "" }));
+    setSize((prev) => ({ ...prev, en: result.en.size ?? "", pl: result.pl.size ?? "" }));
+    setActiveLocale("en");
+    setFeedback({ severity: "success", message: "AI translations filled for EN and PL. Please review before saving." });
   };
 
   return (
@@ -125,11 +172,35 @@ export default function AdminEquipmentForm() {
       )}
       <Stack spacing={1.5}>
         <CategoryMultiField value={categoryIds} onChange={setCategoryIds} categories={allCategories} disabled={loading} />
-        <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <TextField label="Description" multiline minRows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+        <ButtonGroup size="small" variant="outlined">
+          {LOCALES.map((locale) => (
+            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+              {locale.toUpperCase()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
+          Use AI to translate the content
+        </Button>
+        <TextField
+          label={`Title (${activeLocale.toUpperCase()})`}
+          value={title[activeLocale]}
+          onChange={(e) => setLocalizedValue(setTitle, e.target.value)}
+        />
+        <TextField
+          label={`Description (${activeLocale.toUpperCase()})`}
+          multiline
+          minRows={3}
+          value={description[activeLocale]}
+          onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
+        />
         <TextField type="number" label="Price per day" value={pricePerDay} onChange={(e) => setPricePerDay(Number(e.target.value || 0))} />
         <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
-        <TextField label="Size (optional)" value={size} onChange={(e) => setSize(e.target.value)} />
+        <TextField
+          label={`Size (optional) (${activeLocale.toUpperCase()})`}
+          value={size[activeLocale]}
+          onChange={(e) => setLocalizedValue(setSize, e.target.value)}
+        />
         {imagePreviews.length > 0 && (
           <>
             <Typography variant="subtitle2">Arrange selected images (left to right):</Typography>
@@ -160,7 +231,7 @@ export default function AdminEquipmentForm() {
             <Typography variant="body2" color="text.secondary">
               {item.categoryDisplay} • {item.pricePerDay} {item.currency}/day
             </Typography>
-            <Button size="small" component={Link} to={`/admin/equipment/edit/${item._id}`} sx={{ mt: 0.5 }}>
+            <Button size="small" component={Link} to={addLangToPath(`/admin/equipment/edit/${item._id}`, i18n.language)} sx={{ mt: 0.5 }}>
               Edit
             </Button>
           </Box>

@@ -15,9 +15,10 @@ import { Box, Chip, Stack } from "@mui/material";
 import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
 import { useTranslation } from "react-i18next";
 import formatDateEU from "../utils/formatDateEU";
+import { addLangToPath } from "../utils/langUrl";
 
 export default function EventShort({ data }: { data: EventItem }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { _id, images, title, description } = data;
   const adminToken = useSelector((state: RootState) => state.auth.token); 
   const isAdmin = !!adminToken
@@ -154,7 +155,7 @@ export default function EventShort({ data }: { data: EventItem }) {
         </Box>
         <Button 
           component={Link} 
-          to={`/events/${_id}`} 
+          to={addLangToPath(`/events/${_id}`, i18n.language)}
           variant="outlined"
           color="primary"
           sx={{
@@ -176,7 +177,7 @@ export default function EventShort({ data }: { data: EventItem }) {
                 variant="outlined"
                 color="primary"
                 component={Link}
-                to={`/admin/events/edit/${data._id}`}
+                to={addLangToPath(`/admin/events/edit/${data._id}`, i18n.language)}
                 sx={{ mt: 1 }}
               >
                 Edit

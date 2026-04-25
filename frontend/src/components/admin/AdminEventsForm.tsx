@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -13,27 +13,36 @@ import {
 import { displayDateToIso } from "../../utils/dateDisplay";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
+
+type Locale = "be" | "en" | "pl";
+type LocalizedText = Record<Locale, string>;
+const LOCALES: Locale[] = ["be", "en", "pl"];
+const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
 
 export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [activeLocale, setActiveLocale] = useState<Locale>("be");
+  const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [budget, setBudget] = useState("");
   const [currency, setCurrency] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [datedAt, setDatedAt] = useState("");
-  const [approxDate, setApproxDate] = useState("");
+  const [approxDate, setApproxDate] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [countries, setCountries] = useState<string[]>([]);
-  const [location, setLocation] = useState("");
-  const [ageRestriction, setAgeRestriction] = useState("");
+  const [location, setLocation] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
+  const [ageRestriction, setAgeRestriction] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [chatLink, setChatLink] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState<number>(3);
   const [pinned, setPinned] = useState(false);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   const { post, loading, error } = useApi();
+  const adminToken = useSelector((state: RootState) => state.auth.token);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {    
     const files = Array.from(e.target.files ?? []);
@@ -44,6 +53,13 @@ export default function AdminEventsForm() {
 
   async function handleCreateEvent() {
     setFeedback(null);
+    if (!title.be.trim()) {
+      setFeedback({
+        severity: "error",
+        message: "Belarusian title is required."
+      });
+      return;
+    }
     try {
       const filePaths = await uploadFiles(selectedFiles, "/upload/event-image", post);
       const startDateIso = displayDateToIso(startDate);
@@ -75,17 +91,17 @@ export default function AdminEventsForm() {
       }
       setSelectedFiles([]);
       setImagePreviews([]);
-      setTitle("");
-      setDescription("");
+      setTitle({ ...EMPTY_LOCALIZED });
+      setDescription({ ...EMPTY_LOCALIZED });
       setBudget("");
       setCurrency("");
       setStartDate("");
       setEndDate("");
       setDatedAt("");
-      setApproxDate("");
+      setApproxDate({ ...EMPTY_LOCALIZED });
       setCountries([]);
-      setLocation("");
-      setAgeRestriction("");
+      setLocation({ ...EMPTY_LOCALIZED });
+      setAgeRestriction({ ...EMPTY_LOCALIZED });
       setChatLink("");
       setDifficultyLevel(3);
       setPinned(false);
@@ -126,6 +142,52 @@ export default function AdminEventsForm() {
   const hasDatedAtError = datedAt.trim().length > 0 && !datedAtIso;
   const isDateRequirementUnmet = !(startDateIso || datedAtIso);
 
+  const setLocalizedValue = (setter: React.Dispatch<React.SetStateAction<LocalizedText>>, value: string) => {
+    setter((prev) => ({ ...prev, [activeLocale]: value }));
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!adminToken) {
+      setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
+      return;
+    }
+    if (
+      !title.be.trim() &&
+      !description.be.trim() &&
+      !location.be.trim() &&
+      !approxDate.be.trim() &&
+      !ageRestriction.be.trim()
+    ) {
+      setFeedback({ severity: "error", message: "Fill Belarusian fields first before translating." });
+      return;
+    }
+    const result = await post<{ en: Record<string, string>; pl: Record<string, string> }>(
+      "/admin/translate-localized",
+      {
+        entity: "event",
+        source: {
+          title: title.be,
+          description: description.be,
+          location: location.be,
+          approxDate: approxDate.be,
+          ageRestriction: ageRestriction.be
+        }
+      },
+      { Authorization: `Bearer ${adminToken}` }
+    );
+    if (!result) {
+      setFeedback({ severity: "error", message: "AI translation failed. Please try again." });
+      return;
+    }
+    setTitle((prev) => ({ ...prev, en: result.en.title ?? "", pl: result.pl.title ?? "" }));
+    setDescription((prev) => ({ ...prev, en: result.en.description ?? "", pl: result.pl.description ?? "" }));
+    setLocation((prev) => ({ ...prev, en: result.en.location ?? "", pl: result.pl.location ?? "" }));
+    setApproxDate((prev) => ({ ...prev, en: result.en.approxDate ?? "", pl: result.pl.approxDate ?? "" }));
+    setAgeRestriction((prev) => ({ ...prev, en: result.en.ageRestriction ?? "", pl: result.pl.ageRestriction ?? "" }));
+    setActiveLocale("en");
+    setFeedback({ severity: "success", message: "AI translations filled for EN and PL. Please review before saving." });
+  };
+
   return (
     <Box sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>Create Event</Typography>
@@ -141,8 +203,32 @@ export default function AdminEventsForm() {
         </Alert>
       )}
 
-      <TextField fullWidth label="Title" value={title} onChange={(e) => setTitle(e.target.value)} margin="normal" />
-      <TextField fullWidth label="Location" value={location} onChange={(e) => setLocation(e.target.value)} margin="normal" />
+      <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+        <ButtonGroup size="small" variant="outlined">
+          {LOCALES.map((locale) => (
+            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
+              {locale.toUpperCase()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
+          Use AI to translate the content
+        </Button>
+      </Box>
+      <TextField
+        fullWidth
+        label={`Title (${activeLocale.toUpperCase()})`}
+        value={title[activeLocale]}
+        onChange={(e) => setLocalizedValue(setTitle, e.target.value)}
+        margin="normal"
+      />
+      <TextField
+        fullWidth
+        label={`Location (${activeLocale.toUpperCase()})`}
+        value={location[activeLocale]}
+        onChange={(e) => setLocalizedValue(setLocation, e.target.value)}
+        margin="normal"
+      />
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
         <TextField label="Budget (ex: 300-500)" value={budget} onChange={(e) => setBudget(e.target.value)} margin="normal" />
         <TextField label="Currency (ex: EUR)" value={currency} onChange={(e) => setCurrency(e.target.value)} margin="normal" />
@@ -182,8 +268,8 @@ export default function AdminEventsForm() {
       <TextField
         fullWidth
         label="Approx date (if exact dates unknown)"
-        value={approxDate}
-        onChange={(e) => setApproxDate(e.target.value)}
+        value={approxDate[activeLocale]}
+        onChange={(e) => setLocalizedValue(setApproxDate, e.target.value)}
         margin="normal"
       />
       <Autocomplete
@@ -208,8 +294,8 @@ export default function AdminEventsForm() {
       <TextField
         fullWidth
         label="Age restriction"
-        value={ageRestriction}
-        onChange={(e) => setAgeRestriction(e.target.value)}
+        value={ageRestriction[activeLocale]}
+        onChange={(e) => setLocalizedValue(setAgeRestriction, e.target.value)}
         margin="normal"
       />
       <FormControlLabel
@@ -226,8 +312,13 @@ export default function AdminEventsForm() {
         onChange={(e) => setDifficultyLevel(Number(e.target.value || 1))}
         margin="normal"
       />
-      <Typography variant="h6" gutterBottom>Description</Typography>
-      <ReactQuill theme="snow" value={description} onChange={setDescription as any} style={{ marginBottom: 50, height: 300 }} />
+      <Typography variant="h6" gutterBottom>{`Description (${activeLocale.toUpperCase()})`}</Typography>
+      <ReactQuill
+        theme="snow"
+        value={description[activeLocale]}
+        onChange={(value) => setLocalizedValue(setDescription, value)}
+        style={{ marginBottom: 50, height: 300 }}
+      />
 
       {imagePreviews.length > 0 && (
         <>

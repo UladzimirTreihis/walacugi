@@ -8,8 +8,10 @@ import type { RootState } from "../store/store";
 import { useEffect, useState } from "react";
 import useApi from "../hooks/useApi";
 import type { NewsItem } from "../types";
+import { useTranslation } from "react-i18next";
 
 export default function NewsFull() {
+  const { i18n } = useTranslation();
   const { newsId } = useParams<{ newsId: string }>();
   const dispatch = useDispatch();
   const { get } = useApi();
@@ -25,7 +27,7 @@ export default function NewsFull() {
     if (!news) {
       // Try page 1 for main view, then fallback to fetching by id (direct).
       // @ts-expect-error thunk typing
-      dispatch(fetchNews({ page: 1, limit: 4 }));
+      dispatch(fetchNews({ page: 1, limit: 4, lang: i18n.language }));
       get(`/news/${newsId}`)
         .then((data) => {
           if (data) setFetched(data as NewsItem);
@@ -34,7 +36,7 @@ export default function NewsFull() {
           // ignore; UI already handles "not found"
         });
     }
-  }, [dispatch, news, newsId, get]);
+  }, [dispatch, news, newsId, get, i18n.language]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

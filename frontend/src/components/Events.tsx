@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { RootState } from "../store/store";
 
 export default function Events() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
 
   const events = useSelector((state: RootState) => state.events.items);
@@ -15,11 +15,9 @@ export default function Events() {
   const error = useSelector((state: RootState) => state.events.error);
 
   useEffect(() => {
-    if (events.length === 0) {
-      // @ts-expect-error thunk typing
-      dispatch(fetchEvents());
-    }
-  }, [dispatch, events.length]);
+    // @ts-expect-error thunk typing
+    dispatch(fetchEvents(i18n.language));
+  }, [dispatch, i18n.language]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
