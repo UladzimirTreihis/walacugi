@@ -1,22 +1,25 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import type { JwtPayload, VerifyErrors } from "jsonwebtoken";
+import { HttpError } from "./httpErrors.js";
+import { AUTH_TOKEN_COOKIE_NAME } from "./auth.js";
 
-export function checkAdminToken(req: Request, res: Response, next: NextFunction): void {
-  const token = req.headers.authorization?.split(" ")[1];
+export function checkAdminToken(req: Request, _res: Response, next: NextFunction): void {
+  const token = req.cookies?.[AUTH_TOKEN_COOKIE_NAME];
   if (!token) {
-    res.status(401).json({ error: "Unauthorized - No token provided" });
+    next(new HttpError(401, "Unauthorized"));
     return;
   }
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    res.status(500).json({ error: "JWT secret is not configured" });
+    next(new HttpError(500, "Server misconfiguration"));
     return;
   }
 
-  jwt.verify(token, secret, (err, decoded) => {
-    if (err) {
-      res.status(403).json({ error: "Invalid token" });
+  jwt.verify(token, secret, (err: VerifyErrors | null, decoded: string | JwtPayload | undefined) => {
+    if (err || !decoded || typeof decoded !== "object" || (decoded as { role?: unknown }).role !== "admin") {
+      next(new HttpError(401, "Unauthorized"));
       return;
     }
 

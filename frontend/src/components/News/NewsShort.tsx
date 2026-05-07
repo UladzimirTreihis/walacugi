@@ -16,8 +16,7 @@ import NewsAdminActions from "../shared/news/NewsAdminActions";
 export default function NewsShort({ data }: { data: NewsItem }) {
   const { i18n } = useTranslation();
   const { _id, images, title, description } = data;
-  const adminToken = useSelector((state: RootState) => state.auth.token); 
-  const isAdmin = !!adminToken;
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const dispatch = useDispatch();
 
   const { del } = useApi();
@@ -25,9 +24,7 @@ export default function NewsShort({ data }: { data: NewsItem }) {
   const handleDeleteNews = async (newsId: string) => {
     if (!window.confirm("Are you sure you want to delete this news?")) return;
 
-    const response = await del(`/news/${newsId}`, {
-      "x-admin-token": adminToken ?? ""
-    });
+    const response = await del(`/news/${newsId}`);
 
     if (response) {
       dispatch(deleteNews(newsId));

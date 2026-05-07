@@ -17,7 +17,7 @@ import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/lo
 export default function AdminEquipmentForm() {
   const { i18n } = useTranslation();
   const { post, get, loading, error } = useApi();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const [items, setItems] = useState<EquipmentModelItem[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([""]);
@@ -122,7 +122,7 @@ export default function AdminEquipmentForm() {
   };
 
   const handleAutoTranslate = async () => {
-    if (!adminToken) {
+    if (!isAdmin) {
       setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
       return;
     }
@@ -139,8 +139,7 @@ export default function AdminEquipmentForm() {
           description: description.be,
           size: size.be
         }
-      },
-      { Authorization: `Bearer ${adminToken}` }
+      }
     );
     if (!result) {
       setFeedback({ severity: "error", message: "AI translation failed. Please try again." });

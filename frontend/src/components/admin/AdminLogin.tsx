@@ -7,21 +7,27 @@ import { useNavigate } from "react-router-dom";
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const { post, loading } = useApi();
+  const { post, get, loading } = useApi();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleLogin = async () => {
     setError(null);
 
-    const response = await post<{ token: string }>("/admin/login", { password });
+    const response = await post<{ ok: boolean }>("/admin/login", { password });
 
-    if (!response || !response.token) {
+    if (!response || !response.ok) {
       setError("Invalid credentials");
       return;
     }
 
-    dispatch(login(response.token));
+    const csrfResponse = await get<{ csrfToken: string }>("/admin/csrf");
+    if (!csrfResponse?.csrfToken) {
+      setError("Unable to establish secure session");
+      return;
+    }
+
+    dispatch(login({ csrfToken: csrfResponse.csrfToken }));
     navigate("/admin");
   };
 

@@ -36,7 +36,7 @@ export default function AdminNewsForm() {
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   const { post, loading, error } = useApi();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -119,7 +119,7 @@ export default function AdminNewsForm() {
   };
 
   const handleAutoTranslate = async () => {
-    if (!adminToken) {
+    if (!isAdmin) {
       setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
       return;
     }
@@ -137,8 +137,7 @@ export default function AdminNewsForm() {
           description: description.be,
           location: location.be
         }
-      },
-      { Authorization: `Bearer ${adminToken}` }
+      }
     );
     if (!result) {
       setFeedback({ severity: "error", message: "AI translation failed. Please try again." });

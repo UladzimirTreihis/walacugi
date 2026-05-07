@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/store";
 
@@ -10,14 +10,14 @@ type HeadersMap = Record<string, string>;
 export default function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = useSelector((state: RootState) => state.auth.token);
+  const csrfToken = useSelector((state: RootState) => state.auth.csrfToken);
 
-  async function request<T>(
+  const request = useCallback(async (
     endpoint: string,
     method: HttpMethod,
     body: unknown = null,
     headers: HeadersMap = {}
-  ): Promise<T | null> {
+  ): Promise<unknown | null> => {
     setLoading(true);
     setError(null);
 
@@ -25,9 +25,10 @@ export default function useApi() {
       const isFormData = body instanceof FormData;
       const options: RequestInit = {
         method,
+        credentials: "include",
         headers: {
           ...headers,
-          Authorization: `Bearer ${token ?? ""}`,
+          ...(method !== "GET" && method !== "HEAD" && csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
           ...(isFormData ? {} : { "Content-Type": "application/json" })
         }
       };
@@ -48,7 +49,7 @@ export default function useApi() {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      return (await response.json()) as T;
+      return (await response.json()) as unknown;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
@@ -56,18 +57,23 @@ export default function useApi() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [csrfToken]);
 
-  return {
+  const get = useCallback(<T,>(endpoint: string, headers: HeadersMap = {}) =>
+    request(endpoint, "GET", null, headers) as Promise<T | null>, [request]);
+  const post = useCallback(<T,>(endpoint: string, body: unknown, headers: HeadersMap = {}) =>
+    request(endpoint, "POST", body, headers) as Promise<T | null>, [request]);
+  const put = useCallback(<T,>(endpoint: string, body: unknown, headers: HeadersMap = {}) =>
+    request(endpoint, "PUT", body, headers) as Promise<T | null>, [request]);
+  const del = useCallback(<T,>(endpoint: string, headers: HeadersMap = {}) =>
+    request(endpoint, "DELETE", null, headers) as Promise<T | null>, [request]);
+
+  return useMemo(() => ({
     loading,
     error,
-    get: <T>(endpoint: string, headers: HeadersMap = {}) =>
-      request<T>(endpoint, "GET", null, headers),
-    post: <T>(endpoint: string, body: unknown, headers: HeadersMap = {}) =>
-      request<T>(endpoint, "POST", body, headers),
-    put: <T>(endpoint: string, body: unknown, headers: HeadersMap = {}) =>
-      request<T>(endpoint, "PUT", body, headers),
-    del: <T>(endpoint: string, headers: HeadersMap = {}) =>
-      request<T>(endpoint, "DELETE", null, headers)
-  };
+    get,
+    post,
+    put,
+    del
+  }), [del, error, get, loading, post, put]);
 }

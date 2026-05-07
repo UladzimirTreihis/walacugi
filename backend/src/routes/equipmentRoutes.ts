@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import type { ClientSession } from "mongodb";
 import mongoose from "mongoose";
 import EquipmentModel from "../models/EquipmentModel.js";
@@ -10,6 +10,7 @@ import Category from "../models/Category.js";
 import { checkAdminToken } from "../utils/middleware.js";
 import { isValidDateRange, rangesOverlap } from "../utils/bookingValidation.js";
 import { logger } from "../utils/logger.js";
+import { HttpError } from "../utils/httpErrors.js";
 import { getLocalizedText, getRequestedLang, isLocalizedText, type LocalizedText } from "../utils/localizedFields.js";
 
 const router = Router();
@@ -156,7 +157,7 @@ async function modelIdsWithAvailabilityInRange(
   return out;
 }
 
-router.get("/categories", async (_req: Request, res: Response) => {
+router.get("/categories", async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(_req);
     const categories = await Category.find().lean();
@@ -172,58 +173,50 @@ router.get("/categories", async (_req: Request, res: Response) => {
       .sort((a, b) => a.name.localeCompare(b.name));
     res.json(localized);
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.post("/categories", checkAdminToken, async (req: Request, res: Response) => {
+router.post("/categories", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     if (!isLocalizedText(req.body.name)) {
-      res.status(400).json({ error: "Name must be a localized object { en, be, pl }" });
-      return;
+      throw new HttpError(400, "Name must be a localized object { en, be, pl }");
     }
     const nameInBe = req.body.name.be.trim();
     if (!nameInBe) {
-      res.status(400).json({ error: "name.be is required" });
-      return;
+      throw new HttpError(400, "name.be is required");
     }
     if (await categoryNameTaken(nameInBe)) {
-      res.status(409).json({ error: "A category with this name already exists" });
-      return;
+      throw new HttpError(409, "A category with this name already exists");
     }
     const created = await Category.create({ name: req.body.name, updatedAt: new Date() });
     res.json({ ...created.toObject(), name: getLocalizedTextWithFallback(created.name, lang) });
   } catch (err) {
-    const msg = (err as Error).message;
-    if (msg.includes("duplicate key")) {
-      res.status(409).json({ error: "A category with this name already exists" });
+    if (err instanceof Error && err.message.includes("duplicate key")) {
+      next(new HttpError(409, "A category with this name already exists"));
       return;
     }
-    res.status(400).json({ error: msg });
+    next(err);
   }
 });
 
-router.put("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response) => {
+router.put("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     const categoryId = String(req.params.categoryId ?? "");
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      res.status(400).json({ error: "Invalid category id" });
-      return;
+      throw new HttpError(400, "Invalid category id");
     }
     if (!isLocalizedText(req.body.name)) {
-      res.status(400).json({ error: "Name must be a localized object { en, be, pl }" });
-      return;
+      throw new HttpError(400, "Name must be a localized object { en, be, pl }");
     }
     const nameInBe = req.body.name.be.trim();
     if (!nameInBe) {
-      res.status(400).json({ error: "name.be is required" });
-      return;
+      throw new HttpError(400, "name.be is required");
     }
     if (await categoryNameTaken(nameInBe, categoryId)) {
-      res.status(409).json({ error: "A category with this name already exists" });
-      return;
+      throw new HttpError(409, "A category with this name already exists");
     }
     const updated = await Category.findByIdAndUpdate(
       categoryId,
@@ -231,44 +224,39 @@ router.put("/categories/:categoryId", checkAdminToken, async (req: Request, res:
       { new: true }
     );
     if (!updated) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     res.json({ ...updated.toObject(), name: getLocalizedTextWithFallback(updated.name, lang) });
   } catch (err) {
-    const msg = (err as Error).message;
-    if (msg.includes("duplicate key")) {
-      res.status(409).json({ error: "A category with this name already exists" });
+    if (err instanceof Error && err.message.includes("duplicate key")) {
+      next(new HttpError(409, "A category with this name already exists"));
       return;
     }
-    res.status(400).json({ error: msg });
+    next(err);
   }
 });
 
-router.delete("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response) => {
+router.delete("/categories/:categoryId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categoryId = String(req.params.categoryId ?? "");
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      res.status(400).json({ error: "Invalid category id" });
-      return;
+      throw new HttpError(400, "Invalid category id");
     }
     const inUse = await EquipmentModel.exists({ categories: categoryId });
     if (inUse) {
-      res.status(409).json({ error: "Cannot delete a category that is still assigned to equipment" });
-      return;
+      throw new HttpError(409, "Cannot delete a category that is still assigned to equipment");
     }
     const deleted = await Category.findByIdAndDelete(categoryId);
     if (!deleted) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     const categoryId = String(req.query.categoryId ?? "").trim();
@@ -298,51 +286,45 @@ router.get("/", async (req: Request, res: Response) => {
         .filter(notNull)
     );
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.get("/:modelId", async (req: Request, res: Response) => {
+router.get("/:modelId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     const modelId = String(req.params.modelId ?? "");
     if (!mongoose.Types.ObjectId.isValid(modelId)) {
-      res.status(400).json({ error: "Invalid id" });
-      return;
+      throw new HttpError(400, "Invalid id");
     }
     const model = await EquipmentModel.findById(modelId).populate("categories", "name").lean();
     if (!model) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     const units = await EquipmentUnit.find({ modelId: model._id }).sort({ unitNumber: 1 });
     const dto = toEquipmentModelDto(model as Parameters<typeof toEquipmentModelDto>[0], lang);
     if (!dto) {
-      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json({ model: dto, units });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.post("/", checkAdminToken, async (req: Request, res: Response) => {
+router.post("/", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     const categoryIds = normalizeCategoryIds(req.body.categories);
     if (!categoryIds) {
-      res.status(400).json({ error: "At least one category is required" });
-      return;
+      throw new HttpError(400, "At least one category is required");
     }
     const found = await Category.countDocuments({ _id: { $in: categoryIds } });
     if (found !== categoryIds.length) {
-      res.status(400).json({ error: "One or more categories do not exist" });
-      return;
+      throw new HttpError(400, "One or more categories do not exist");
     }
     if (!isLocalizedText(req.body.title) || !isLocalizedText(req.body.description) || !isLocalizedText(req.body.size)) {
-      res.status(400).json({ error: "title, description, and size must be localized objects { en, be, pl }" });
-      return;
+      throw new HttpError(400, "title, description, and size must be localized objects { en, be, pl }");
     }
     const payload = {
       categories: categoryIds,
@@ -367,41 +349,35 @@ router.post("/", checkAdminToken, async (req: Request, res: Response) => {
     });
     const populated = await EquipmentModel.findById(created._id).populate("categories", "name").lean();
     if (!populated) {
-      res.status(500).json({ error: "Unable to fetch created model" });
-      return;
+      throw new HttpError(500, "Unable to fetch created model");
     }
     const dto = toEquipmentModelDto(populated as Parameters<typeof toEquipmentModelDto>[0], lang);
     if (!dto) {
-      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(dto);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => {
+router.put("/:modelId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const lang = getRequestedLang(req);
     if (!isLocalizedText(req.body.title) || !isLocalizedText(req.body.description) || !isLocalizedText(req.body.size)) {
-      res.status(400).json({ error: "title, description, and size must be localized objects { en, be, pl }" });
-      return;
+      throw new HttpError(400, "title, description, and size must be localized objects { en, be, pl }");
     }
     const modelId = String(req.params.modelId ?? "");
     if (!mongoose.Types.ObjectId.isValid(modelId)) {
-      res.status(400).json({ error: "Invalid id" });
-      return;
+      throw new HttpError(400, "Invalid id");
     }
     const categoryIds = normalizeCategoryIds(req.body.categories);
     if (!categoryIds) {
-      res.status(400).json({ error: "At least one category is required" });
-      return;
+      throw new HttpError(400, "At least one category is required");
     }
     const found = await Category.countDocuments({ _id: { $in: categoryIds } });
     if (found !== categoryIds.length) {
-      res.status(400).json({ error: "One or more categories do not exist" });
-      return;
+      throw new HttpError(400, "One or more categories do not exist");
     }
     const updated = await EquipmentModel.findByIdAndUpdate(
       modelId,
@@ -421,21 +397,19 @@ router.put("/:modelId", checkAdminToken, async (req: Request, res: Response) => 
       .populate("categories", "name")
       .lean();
     if (!updated) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     const dto = toEquipmentModelDto(updated as Parameters<typeof toEquipmentModelDto>[0], lang);
     if (!dto) {
-      res.status(500).json({ error: "Invalid localized content shape in stored equipment model" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(dto);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.delete("/:modelId", checkAdminToken, async (req: Request, res: Response) => {
+router.delete("/:modelId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const modelId = req.params.modelId;
     await EquipmentModel.findByIdAndDelete(modelId);
@@ -446,16 +420,15 @@ router.delete("/:modelId", checkAdminToken, async (req: Request, res: Response) 
     await UnitBlock.deleteMany({ unitId: { $in: unitIds } });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.post("/units/:unitId/clone", checkAdminToken, async (req: Request, res: Response) => {
+router.post("/units/:unitId/clone", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const source = await EquipmentUnit.findById(req.params.unitId);
     if (!source) {
-      res.status(404).json({ error: "Unit not found" });
-      return;
+      throw new HttpError(404, "Unit not found");
     }
     const lastUnit = await EquipmentUnit.findOne({ modelId: source.modelId }).sort({ unitNumber: -1 });
     const nextNumber = (lastUnit?.unitNumber ?? source.unitNumber) + 1;
@@ -470,16 +443,15 @@ router.post("/units/:unitId/clone", checkAdminToken, async (req: Request, res: R
     });
     res.json(cloned);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response) => {
+router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const unitId = String(req.params.unitId ?? "");
     if (!mongoose.Types.ObjectId.isValid(unitId)) {
-      res.status(400).json({ error: "Invalid unit id" });
-      return;
+      throw new HttpError(400, "Invalid unit id");
     }
     const updates: { condition?: string; status?: "active" | "maintenance" | "retired"; updatedAt: Date } = {
       updatedAt: new Date()
@@ -491,8 +463,7 @@ router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response
       updates.status = req.body.status;
     }
     if (!updates.condition && !updates.status) {
-      res.status(400).json({ error: "Provide at least one updatable field: condition or status" });
-      return;
+      throw new HttpError(400, "Provide at least one updatable field: condition or status");
     }
     const updated = await EquipmentUnit.findByIdAndUpdate(
       unitId,
@@ -500,21 +471,19 @@ router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response
       { new: true }
     );
     if (!updated) {
-      res.status(404).json({ error: "Unit not found" });
-      return;
+      throw new HttpError(404, "Unit not found");
     }
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.get("/units/:unitId/unavailable", async (req: Request, res: Response) => {
+router.get("/units/:unitId/unavailable", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const unit = await EquipmentUnit.findById(req.params.unitId);
     if (!unit) {
-      res.status(404).json({ error: "Unit not found" });
-      return;
+      throw new HttpError(404, "Unit not found");
     }
 
     const fromRaw = String(req.query.from ?? "");
@@ -522,8 +491,7 @@ router.get("/units/:unitId/unavailable", async (req: Request, res: Response) => 
     const from = fromRaw ? new Date(fromRaw) : new Date();
     const to = toRaw ? new Date(toRaw) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     if (!isValidDateRange(from, to)) {
-      res.status(400).json({ error: "Invalid unavailable range query" });
-      return;
+      throw new HttpError(400, "Invalid unavailable range query");
     }
 
     const [reservations, blocks] = await Promise.all([
@@ -567,11 +535,11 @@ router.get("/units/:unitId/unavailable", async (req: Request, res: Response) => 
       unavailableRanges
     });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.delete("/units/:unitId", checkAdminToken, async (req: Request, res: Response) => {
+router.delete("/units/:unitId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const unitId = req.params.unitId;
     await EquipmentUnit.findByIdAndDelete(unitId);
@@ -579,11 +547,11 @@ router.delete("/units/:unitId", checkAdminToken, async (req: Request, res: Respo
     await UnitBlock.deleteMany({ unitId });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.get("/:modelId/availability", async (req: Request, res: Response) => {
+router.get("/:modelId/availability", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startDate, endDate } = req.query as Record<string, string>;
     const start = startDate ? new Date(startDate) : null;
@@ -628,17 +596,16 @@ router.get("/:modelId/availability", async (req: Request, res: Response) => {
 
     res.json({ units: result });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.post("/units/:unitId/blocks", checkAdminToken, async (req: Request, res: Response) => {
+router.post("/units/:unitId/blocks", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const startDate = new Date(req.body.startDate);
     const endDate = new Date(req.body.endDate);
     if (!isValidDateRange(startDate, endDate)) {
-      res.status(400).json({ error: "Invalid block date range" });
-      return;
+      throw new HttpError(400, "Invalid block date range");
     }
     const created = await UnitBlock.create({
       unitId: req.params.unitId,
@@ -649,20 +616,20 @@ router.post("/units/:unitId/blocks", checkAdminToken, async (req: Request, res: 
     });
     res.json(created);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.delete("/blocks/:blockId", checkAdminToken, async (req: Request, res: Response) => {
+router.delete("/blocks/:blockId", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   try {
     await UnitBlock.findByIdAndDelete(req.params.blockId);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    next(err);
   }
 });
 
-router.post("/confirm-booking", checkAdminToken, async (req: Request, res: Response) => {
+router.post("/confirm-booking", checkAdminToken, async (req: Request, res: Response, next: NextFunction) => {
   const session = await mongoose.startSession();
   const startedAtMs = Date.now();
   const logContext = {
@@ -673,8 +640,7 @@ router.post("/confirm-booking", checkAdminToken, async (req: Request, res: Respo
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     if (items.length === 0) {
       logger.warn("confirm_booking_empty_items", logContext);
-      res.status(400).json({ error: "No checkout items provided" });
-      return;
+      throw new HttpError(400, "No checkout items provided");
     }
 
     const checkoutRef = String(req.body.checkoutRef ?? "");
@@ -797,7 +763,7 @@ router.post("/confirm-booking", checkAdminToken, async (req: Request, res: Respo
       durationMs: Date.now() - startedAtMs,
       error: err
     });
-    res.status(400).json({ error: (err as Error).message });
+    next(err);
   } finally {
     await session.endSession();
   }

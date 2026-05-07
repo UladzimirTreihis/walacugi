@@ -47,7 +47,7 @@ export default function Cart() {
   const dispatch = useDispatch<AppDispatch>();
   const { post, loading } = useApi();
   const items = useSelector((state: RootState) => state.checkout.items);
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cartFeedback, setCartFeedback] = useState<UiFeedback | null>(null);
   const [cartLinkInput, setCartLinkInput] = useState("");
@@ -186,7 +186,7 @@ export default function Cart() {
               </IconButton>
             </span>
           </Tooltip>
-          {adminToken && (
+          {isAdmin && (
             <Tooltip title={t("cart.confirm_admin")}>
               <span>
                 <IconButton

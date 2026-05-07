@@ -2,6 +2,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import Event from "../models/Event.js";
 import { checkAdminToken } from "../utils/middleware.js";
+import { HttpError } from "../utils/httpErrors.js";
+import { asyncHandler } from "../utils/errorHandler.js";
 import { getLocalizedText, getRequestedLang, isLocalizedText } from "../utils/localizedFields.js";
 
 const router = Router();
@@ -42,14 +44,11 @@ function toLocalizedEvent(event: Record<string, unknown>, lang: ReturnType<typeo
   };
 }
 
-router.get("/", async (_req: Request, res: Response) => {
-  try {
-    const lang = getRequestedLang(_req);
+router.get(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
+    const lang = getRequestedLang(req);
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-    // Sorting:
-    // 1) pinned first
-    // 2) among pinned: by updatedAt desc
-    // 3) others: by effectiveDate desc, where effectiveDate = datedAt || startDate
     const events = await Event.aggregate([
       {
         $addFields: {
@@ -75,92 +74,83 @@ router.get("/", async (_req: Request, res: Response) => {
       }
     ]);
     res.json(events.map((event: Record<string, unknown>) => toLocalizedEvent(event, lang)).filter(Boolean));
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.get("/:id", async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/:id",
+  asyncHandler(async (req: Request, res: Response) => {
     const lang = getRequestedLang(req);
     const item = await Event.findById(req.params.id);
     if (!item) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     const localized = toLocalizedEvent(item.toObject(), lang);
     if (!localized) {
-      res.status(500).json({ error: "Invalid localized content shape in stored event item" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(localized);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.post("/", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.post(
+  "/",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const lang = getRequestedLang(req);
     const normalized = parseEventLocalizedPayload(req.body as Record<string, unknown>);
     if (!normalized) {
-      res.status(400).json({
-        error: "title, description, location, approxDate, and ageRestriction must be localized objects { en, be, pl }"
-      });
-      return;
+      throw new HttpError(
+        400,
+        "title, description, location, approxDate, and ageRestriction must be localized objects { en, be, pl }"
+      );
     }
     const body = { ...normalized, updatedAt: new Date() };
     const newEvent = new Event(body);
     const saved = await newEvent.save();
     const localized = toLocalizedEvent(saved.toObject(), lang);
     if (!localized) {
-      res.status(500).json({ error: "Invalid localized content shape in stored event item" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(localized);
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.put("/:id", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.put(
+  "/:id",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const lang = getRequestedLang(req);
     const normalized = parseEventLocalizedPayload(req.body as Record<string, unknown>);
     if (!normalized) {
-      res.status(400).json({
-        error: "title, description, location, approxDate, and ageRestriction must be localized objects { en, be, pl }"
-      });
-      return;
+      throw new HttpError(
+        400,
+        "title, description, location, approxDate, and ageRestriction must be localized objects { en, be, pl }"
+      );
     }
     const payload = { ...normalized, updatedAt: new Date() };
     const updated = await Event.findByIdAndUpdate(req.params.id, payload, { new: true });
     if (!updated) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     const localized = toLocalizedEvent(updated.toObject(), lang);
     if (!localized) {
-      res.status(500).json({ error: "Invalid localized content shape in stored event item" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(localized);
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.delete("/:id", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.delete(
+  "/:id",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const deleted = await Event.findByIdAndDelete(req.params.id);
     if (!deleted) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     res.json({ message: "Deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
 export default router;

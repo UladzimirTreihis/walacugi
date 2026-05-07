@@ -9,6 +9,11 @@ import EquipmentModel from "../models/EquipmentModel.js";
 import EquipmentUnit from "../models/EquipmentUnit.js";
 import { checkAdminToken } from "../utils/middleware.js";
 import { isLocalizedText } from "../utils/localizedFields.js";
+import { HttpError } from "../utils/httpErrors.js";
+import { asyncHandler } from "../utils/errorHandler.js";
+import { loginLimiter } from "../utils/rateLimit.js";
+import { clearAuthCookie, setAuthCookie } from "../utils/auth.js";
+import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
 
 const router = Router();
 
@@ -39,66 +44,71 @@ function entityFields(entity: EntityType): string[] {
   return ["title", "description", "location", "approxDate", "ageRestriction"];
 }
 
-router.post("/login", async (req: Request, res: Response) => {
-  const { password } = req.body as { password?: string };
-  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
-  const jwtSecret = process.env.JWT_SECRET;
+router.post(
+  "/login",
+  loginLimiter,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { password } = req.body as { password?: string };
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+    const jwtSecret = process.env.JWT_SECRET;
 
-  if (!password || !adminPasswordHash || !jwtSecret) {
-    res.status(500).json({ error: "Missing auth configuration" });
-    return;
-  }
-
-  const isMatch = await bcrypt.compare(password, adminPasswordHash);
-  if (!isMatch) {
-    res.status(401).json({ error: "Invalid credentials" });
-    return;
-  }
-
-  const token = jwt.sign({ role: "admin" }, jwtSecret, { expiresIn: "24h" });
-  res.json({ token });
-});
-
-router.post("/verify-token", async (req: Request, res: Response) => {
-  const { token } = req.body as { token?: string };
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!token || !jwtSecret) {
-    res.status(401).json({ valid: false });
-    return;
-  }
-
-  jwt.verify(token, jwtSecret, (err) => {
-    if (err) {
-      res.status(403).json({ valid: false });
-      return;
+    if (!password || !adminPasswordHash || !jwtSecret) {
+      throw new HttpError(500, "Server misconfiguration");
     }
-    res.json({ valid: true });
+
+    const isMatch = await bcrypt.compare(password, adminPasswordHash);
+    if (!isMatch) {
+      throw new HttpError(401, "Invalid credentials");
+    }
+
+    const token = jwt.sign({ role: "admin" }, jwtSecret, { expiresIn: "24h" });
+    setAuthCookie(res, token);
+    res.json({ ok: true });
+  })
+);
+
+router.post("/logout", checkAdminToken, (req: Request, res: Response) => {
+  clearAuthCookie(res);
+  res.clearCookie(CSRF_COOKIE_NAME, {
+    sameSite: "none",
+    secure: true,
+    httpOnly: false,
+    path: "/"
   });
+  res.status(204).send();
 });
 
-router.get("/news/:id/localized", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.get("/me", checkAdminToken, (_req: Request, res: Response) => {
+  res.json({ isAdmin: true });
+});
+
+router.get("/csrf", checkAdminToken, (req: Request, res: Response) => {
+  const csrfToken = generateCsrfToken(req, res);
+  res.json({ csrfToken });
+});
+
+router.get(
+  "/news/:id/localized",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const item = await News.findById(req.params.id).lean();
     if (!item) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     if (!isLocalizedText(item.title) || !isLocalizedText(item.description) || !isLocalizedText(item.location)) {
-      res.status(500).json({ error: "Invalid localized news shape" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(item);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.get("/events/:id/localized", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/events/:id/localized",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const item = await Event.findById(req.params.id).lean();
     if (!item) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     if (
       !isLocalizedText(item.title) ||
@@ -107,78 +117,71 @@ router.get("/events/:id/localized", checkAdminToken, async (req: Request, res: R
       !isLocalizedText(item.approxDate) ||
       !isLocalizedText(item.ageRestriction)
     ) {
-      res.status(500).json({ error: "Invalid localized event shape" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(item);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.get("/categories/localized", checkAdminToken, async (_req: Request, res: Response) => {
-  try {
+router.get(
+  "/categories/localized",
+  checkAdminToken,
+  asyncHandler(async (_req: Request, res: Response) => {
     const categories = await Category.find().sort({ updatedAt: -1, createdAt: -1 }).lean();
     if (categories.some((item) => !isLocalizedText(item.name))) {
-      res.status(500).json({ error: "Invalid localized category shape" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     res.json(categories);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.get("/equipment/:id/localized", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/equipment/:id/localized",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const model = await EquipmentModel.findById(req.params.id).populate("categories", "name").lean();
     if (!model) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     if (!isLocalizedText(model.title) || !isLocalizedText(model.description) || !isLocalizedText(model.size)) {
-      res.status(500).json({ error: "Invalid localized equipment shape" });
-      return;
+      throw new HttpError(500, "Invalid stored content");
     }
     const units = await EquipmentUnit.find({ modelId: model._id }).sort({ unitNumber: 1 }).lean();
     res.json({ model, units });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.post("/translate-localized", checkAdminToken, async (req: Request, res: Response) => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "OPENAI_API_KEY is not configured" });
-    return;
-  }
-
-  const parsed = validateTranslatePayload(req.body);
-  if (!parsed) {
-    res.status(400).json({ error: "Invalid payload. Expected { entity, source }" });
-    return;
-  }
-
-  const fields = entityFields(parsed.entity);
-  for (const field of fields) {
-    if (typeof parsed.source[field] !== "string") {
-      res.status(400).json({ error: `Missing source field: ${field}` });
-      return;
+router.post(
+  "/translate-localized",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new HttpError(500, "Translation is not configured");
     }
-  }
 
-  const prompt = [
-    "Translate the provided JSON field values from source language to English and Polish.",
-    "Source is in key `be` and may be Belarusian or Russian.",
-    "Output must be valid JSON only, no markdown.",
-    "Return shape: {\"en\": { ...same fields... }, \"pl\": { ...same fields... }}.",
-    "Preserve HTML tags and structure exactly.",
-    "Preserve links, URLs, emojis, placeholders, numbers, and punctuation intent.",
-    "Preserve the tone and style of the source text."
-  ].join(" ");
+    const parsed = validateTranslatePayload(req.body);
+    if (!parsed) {
+      throw new HttpError(400, "Invalid payload. Expected { entity, source }");
+    }
 
-  try {
+    const fields = entityFields(parsed.entity);
+    for (const field of fields) {
+      if (typeof parsed.source[field] !== "string") {
+        throw new HttpError(400, `Missing source field: ${field}`);
+      }
+    }
+
+    const prompt = [
+      "Translate the provided JSON field values from source language to English and Polish.",
+      "Source is in key `be` and may be Belarusian or Russian.",
+      "Output must be valid JSON only, no markdown.",
+      "Return shape: {\"en\": { ...same fields... }, \"pl\": { ...same fields... }}.",
+      "Preserve HTML tags and structure exactly.",
+      "Preserve links, URLs, emojis, placeholders, numbers, and punctuation intent.",
+      "Preserve the tone and style of the source text."
+    ].join(" ");
+
     const response = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
@@ -203,9 +206,7 @@ router.post("/translate-localized", checkAdminToken, async (req: Request, res: R
     });
 
     if (!response.ok) {
-      const details = await response.text();
-      res.status(502).json({ error: "OpenAI translation request failed", details });
-      return;
+      throw new HttpError(502, "Translation request failed");
     }
 
     const data = (await response.json()) as {
@@ -213,33 +214,28 @@ router.post("/translate-localized", checkAdminToken, async (req: Request, res: R
     };
     const raw = data.choices?.[0]?.message?.content;
     if (!raw) {
-      res.status(502).json({ error: "Empty translation response from OpenAI" });
-      return;
+      throw new HttpError(502, "Empty translation response");
     }
 
     let parsedOut: unknown;
     try {
       parsedOut = JSON.parse(raw);
     } catch {
-      res.status(502).json({ error: "Invalid JSON response from OpenAI" });
-      return;
+      throw new HttpError(502, "Invalid translation response");
     }
 
     if (!parsedOut || typeof parsedOut !== "object") {
-      res.status(502).json({ error: "Invalid translation response shape" });
-      return;
+      throw new HttpError(502, "Invalid translation response shape");
     }
     const translated = parsedOut as Record<string, unknown>;
     const en = translated.en as Record<string, unknown> | undefined;
     const pl = translated.pl as Record<string, unknown> | undefined;
     if (!en || !pl || typeof en !== "object" || typeof pl !== "object") {
-      res.status(502).json({ error: "Translation response must include en/pl objects" });
-      return;
+      throw new HttpError(502, "Translation response must include en/pl objects");
     }
     for (const field of fields) {
       if (typeof en[field] !== "string" || typeof pl[field] !== "string") {
-        res.status(502).json({ error: `Invalid translated field: ${field}` });
-        return;
+        throw new HttpError(502, `Invalid translated field: ${field}`);
       }
     }
 
@@ -247,9 +243,7 @@ router.post("/translate-localized", checkAdminToken, async (req: Request, res: R
       en: Object.fromEntries(fields.map((f) => [f, String(en[f])])) as Record<string, string>,
       pl: Object.fromEntries(fields.map((f) => [f, String(pl[f])])) as Record<string, string>
     });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
 export default router;
