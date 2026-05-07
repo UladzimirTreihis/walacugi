@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Box, CircularProgress, Container, Pagination, Stack, Typography } from "@mui/material";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchNews, setNewsFromCache } from "../store/newsSlice";
+import { fetchNews, setNewsFromCache } from "../../store/newsSlice";
 import NewsShort from "./NewsShort";
 import SimpleNews from "./SimpleNews";
 import { useTranslation } from "react-i18next";
-import type { AppDispatch, RootState } from "../store/store";
+import type { AppDispatch, RootState } from "../../store/store";
 
 export default function News() {
   const { t, i18n } = useTranslation();

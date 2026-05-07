@@ -1,6 +1,7 @@
 import { Schema } from "mongoose";
+import { EMPTY_LOCALIZED_TEXT } from "../utils/localizationContract.js";
 
-export const EMPTY_LOCALIZED_TEXT = { en: "", be: "", pl: "" };
+export { EMPTY_LOCALIZED_TEXT };
 
 export const localizedTextSchema = new Schema(
   {

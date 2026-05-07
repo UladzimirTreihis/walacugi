@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import { COUNTRY_OPTIONS, COUNTRY_BY_CODE, countryMatchesQuery, getFlagEmoji } from "../../constants/countries";
@@ -9,6 +9,8 @@ import SortableImageList from "./SortableImageList";
 import { displayDateToIso, isoDateToDisplay } from "../../utils/dateDisplay";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 interface EditableImage {
   id: string;
@@ -17,10 +19,15 @@ interface EditableImage {
   file?: File;
 }
 
-type Locale = "be" | "en" | "pl";
-type LocalizedText = Record<Locale, string>;
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+interface NewsLocalizedResponse {
+  title?: LocalizedText;
+  description?: LocalizedText;
+  datedAt?: string;
+  pinned?: boolean;
+  location?: LocalizedText;
+  countries?: string[];
+  images?: string[];
+}
 
 export default function AdminEditNewsForm() {
   const { newsId } = useParams<{ newsId: string }>();
@@ -43,8 +50,8 @@ export default function AdminEditNewsForm() {
       navigate("/admin/login");
       return;
     }
-    get(`/admin/news/${newsId}/localized`, { Authorization: `Bearer ${adminToken}` })
-      .then((data: any) => {
+    get<NewsLocalizedResponse>(`/admin/news/${newsId}/localized`, { Authorization: `Bearer ${adminToken}` })
+      .then((data) => {
         if (data) {
           setTitle(data.title || { ...EMPTY_LOCALIZED });
           setDescription(data.description || { ...EMPTY_LOCALIZED });
@@ -209,13 +216,7 @@ export default function AdminEditNewsForm() {
       )}
 
       <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-        <ButtonGroup size="small" variant="outlined">
-          {LOCALES.map((locale) => (
-            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-              {locale.toUpperCase()}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
         <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
           Use AI to translate the content
         </Button>

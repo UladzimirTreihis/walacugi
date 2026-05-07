@@ -1,9 +1,6 @@
 import type { Request } from "express";
-
-export const SUPPORTED_LANGS = ["en", "be", "pl"] as const;
-export type SupportedLang = (typeof SUPPORTED_LANGS)[number];
-
-export type LocalizedText = Record<SupportedLang, string>;
+import { SUPPORTED_LANGS, type SupportedLang, type LocalizedText } from "./localizationContract.js";
+export type { LocalizedText } from "./localizationContract.js";
 
 export function normalizeLang(raw: unknown): SupportedLang | null {
   if (typeof raw !== "string" || !raw.trim()) return null;

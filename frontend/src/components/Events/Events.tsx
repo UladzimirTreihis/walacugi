@@ -1,22 +1,21 @@
 import React, { useEffect } from "react";
 import { Box, Container, Typography } from "@mui/material";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchEvents } from "../store/eventsSlice";
+import { fetchEvents } from "../../store/eventsSlice";
 import EventShort from "./EventShort";
 import { useTranslation } from "react-i18next";
-import type { RootState } from "../store/store";
+import type { AppDispatch, RootState } from "../../store/store";
 
 export default function Events() {
   const { t, i18n } = useTranslation();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const events = useSelector((state: RootState) => state.events.items);
   const loading = useSelector((state: RootState) => state.events.loading);
   const error = useSelector((state: RootState) => state.events.error);
 
   useEffect(() => {
-    // @ts-expect-error thunk typing
-    dispatch(fetchEvents(i18n.language));
+    void dispatch(fetchEvents(i18n.language));
   }, [dispatch, i18n.language]);
 
   if (loading) return <p>Loading...</p>;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -15,11 +15,8 @@ import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feed
 import { uploadFiles } from "../../utils/uploadFiles";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-
-type Locale = "be" | "en" | "pl";
-type LocalizedText = Record<Locale, string>;
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 export default function AdminEventsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -204,13 +201,7 @@ export default function AdminEventsForm() {
       )}
 
       <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-        <ButtonGroup size="small" variant="outlined">
-          {LOCALES.map((locale) => (
-            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-              {locale.toUpperCase()}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
         <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
           Use AI to translate the content
         </Button>

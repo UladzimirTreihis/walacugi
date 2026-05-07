@@ -476,9 +476,27 @@ router.post("/units/:unitId/clone", checkAdminToken, async (req: Request, res: R
 
 router.put("/units/:unitId", checkAdminToken, async (req: Request, res: Response) => {
   try {
+    const unitId = String(req.params.unitId ?? "");
+    if (!mongoose.Types.ObjectId.isValid(unitId)) {
+      res.status(400).json({ error: "Invalid unit id" });
+      return;
+    }
+    const updates: { condition?: string; status?: "active" | "maintenance" | "retired"; updatedAt: Date } = {
+      updatedAt: new Date()
+    };
+    if (typeof req.body.condition === "string") {
+      updates.condition = req.body.condition;
+    }
+    if (req.body.status === "active" || req.body.status === "maintenance" || req.body.status === "retired") {
+      updates.status = req.body.status;
+    }
+    if (!updates.condition && !updates.status) {
+      res.status(400).json({ error: "Provide at least one updatable field: condition or status" });
+      return;
+    }
     const updated = await EquipmentUnit.findByIdAndUpdate(
-      req.params.unitId,
-      { ...req.body, updatedAt: new Date() },
+      unitId,
+      updates,
       { new: true }
     );
     if (!updated) {

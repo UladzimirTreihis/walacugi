@@ -7,11 +7,11 @@ import "./i18n";
 import { AuthProvider } from "./contexts/AuthProvider";
 import { createAppTheme } from "./theme";
 
-import Events from "./components/Events";
-import EventFull from "./components/EventFull";
-import NewsFull from "./components/NewsFull";
+import Events from "./components/Events/Events";
+import EventFull from "./components/Events/EventFull";
+import NewsFull from "./components/News/NewsFull";
 import Root from "./components/Root";
-import News from "./components/News";
+import News from "./components/News/News";
 
 import AdminPage from "./components/admin/AdminPage";
 import AdminEditNewsForm from "./components/admin/AdminEditNewsForm";
@@ -23,8 +23,8 @@ import AdminEditEventForm from "./components/admin/AdminEditEventForm";
 import AdminEquipmentForm from "./components/admin/AdminEquipmentForm";
 import AdminEditEquipmentForm from "./components/admin/AdminEditEquipmentForm";
 import AdminCategoriesPage from "./components/admin/AdminCategoriesPage";
-import Equipment from "./components/Equipment";
-import EquipmentDetail from "./components/EquipmentDetail";
+import Equipment from "./components/Equipment/Equipment";
+import EquipmentDetail from "./components/Equipment/EquipmentDetail";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 

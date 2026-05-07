@@ -6,6 +6,7 @@ import EquipmentModel from "../models/EquipmentModel.js";
 import Category from "../models/Category.js";
 import { logger } from "../utils/logger.js";
 import { isLocalizedText, type LocalizedText } from "../utils/localizedFields.js";
+import { DEFAULT_SOURCE_LANG, EMPTY_LOCALIZED_TEXT } from "../utils/localizationContract.js";
 
 dotenv.config();
 
@@ -17,8 +18,6 @@ const DB_URI = process.env.MONGO_URL || fallbackUri;
 
 type AnyDoc = Record<string, unknown> & { _id: mongoose.Types.ObjectId };
 
-const DEFAULT_SOURCE_LANG = "be";
-
 function needsMigration(value: unknown) {
   return typeof value === "string" || value == null || !isLocalizedText(value);
 }
@@ -28,7 +27,7 @@ function buildLocalizedFrom(value: unknown) {
     return value;
   }
   const text = typeof value === "string" ? value : "";
-  const out: LocalizedText = { en: "", be: "", pl: "" };
+  const out: LocalizedText = { ...EMPTY_LOCALIZED_TEXT };
   out[DEFAULT_SOURCE_LANG] = text;
   return out;
 }

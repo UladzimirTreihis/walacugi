@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   CircularProgress,
   IconButton,
   Stack,
@@ -15,13 +14,11 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import useApi from "../../hooks/useApi";
-import type { CategoryItem, CategoryLocalizedItem, LocalizedText } from "../../types";
+import type { CategoryItem, CategoryLocalizedItem } from "../../types";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { useTranslation } from "react-i18next";
-
-type Locale = "be" | "en" | "pl";
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 export default function AdminCategoriesPage() {
   const { t } = useTranslation();
@@ -118,13 +115,9 @@ export default function AdminCategoriesPage() {
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
         {t("admin_page.categories_add_new")}
       </Typography>
-      <ButtonGroup size="small" variant="outlined" sx={{ mb: 1 }}>
-        {LOCALES.map((locale) => (
-          <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-            {locale.toUpperCase()}
-          </Button>
-        ))}
-      </ButtonGroup>
+      <Box sx={{ mb: 1 }}>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
+      </Box>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 3 }}>
         <TextField
           label={`${t("admin_page.category_name")} (${activeLocale.toUpperCase()})`}

@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   FormControlLabel,
   Switch,
   TextField,
@@ -21,11 +20,8 @@ import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feed
 import { uploadFiles } from "../../utils/uploadFiles";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-
-type Locale = "be" | "en" | "pl";
-type LocalizedText = Record<Locale, string>;
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 export default function AdminNewsForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -171,13 +167,7 @@ export default function AdminNewsForm() {
         </Alert>
       )}
       <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-        <ButtonGroup size="small" variant="outlined">
-          {LOCALES.map((locale) => (
-            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-              {locale.toUpperCase()}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
         <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
           Use AI to translate the content
         </Button>

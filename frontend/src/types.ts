@@ -1,3 +1,5 @@
+import type { LocalizedText } from "./types/localization";
+
 export interface NewsItem {
   _id: string;
   title: string;
@@ -37,12 +39,6 @@ export interface CategoryItem {
   name: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface LocalizedText {
-  be: string;
-  en: string;
-  pl: string;
 }
 
 export interface CategoryLocalizedItem {
