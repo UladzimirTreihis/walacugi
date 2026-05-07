@@ -1,11 +1,12 @@
 import React from "react";
 import Slider from "react-slick";
+import type { Settings } from "react-slick";
 import { Box } from "@mui/material";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 export default function ImageCarousel({ images }: { images: string[] }) {
-  const settings: any = {
+  const settings: Settings = {
     dots: false,
     infinite: true,
     speed: 500,

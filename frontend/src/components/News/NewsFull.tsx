@@ -1,19 +1,19 @@
 import { useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchNews } from "../store/newsSlice";
+import { fetchNews } from "../../store/newsSlice";
 import { Box, Container, Typography } from "@mui/material";
-import ImageGallery from "./shared/ImageGallery";
+import ImageGallery from "../shared/ImageGallery";
 import DOMPurify from "dompurify";
-import type { RootState } from "../store/store";
+import type { AppDispatch, RootState } from "../../store/store";
 import { useEffect, useState } from "react";
-import useApi from "../hooks/useApi";
-import type { NewsItem } from "../types";
+import useApi from "../../hooks/useApi";
+import type { NewsItem } from "../../types";
 import { useTranslation } from "react-i18next";
 
 export default function NewsFull() {
   const { i18n } = useTranslation();
   const { newsId } = useParams<{ newsId: string }>();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { get } = useApi();
   const [fetched, setFetched] = useState<NewsItem | null>(null);
 
@@ -25,16 +25,12 @@ export default function NewsFull() {
 
   useEffect(() => {
     if (!news) {
-      // Try page 1 for main view, then fallback to fetching by id (direct).
-      // @ts-expect-error thunk typing
-      dispatch(fetchNews({ page: 1, limit: 4, lang: i18n.language }));
+      void dispatch(fetchNews({ page: 1, limit: 4, lang: i18n.language }));
       get(`/news/${newsId}`)
         .then((data) => {
           if (data) setFetched(data as NewsItem);
         })
-        .catch(() => {
-          // ignore; UI already handles "not found"
-        });
+        .catch(() => undefined);
     }
   }, [dispatch, news, newsId, get, i18n.language]);
 
@@ -58,7 +54,7 @@ export default function NewsFull() {
         <Typography
           variant="body1"
           sx={{ mt: 2 }}
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.description) }} 
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.description) }}
         />
       </Box>
     </Container>

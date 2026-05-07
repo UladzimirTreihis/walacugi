@@ -1,30 +1,29 @@
-// EventShort.tsx
 import React from "react";
 import { Card, CardMedia, CardContent, Button } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import useApi from "../hooks/useApi";
-import { deleteEvent } from "../store/eventsSlice";
+import useApi from "../../hooks/useApi";
+import { deleteEvent } from "../../store/eventsSlice";
 import DOMPurify from "dompurify";
-import type { RootState } from "../store/store";
-import type { EventItem } from "../types";
-import ClampedTitle from "./shared/ClampedTitle";
-import ClampedHtml from "./shared/ClampedHtml";
+import type { RootState } from "../../store/store";
+import type { EventItem } from "../../types";
+import ClampedTitle from "../shared/ClampedTitle";
+import ClampedHtml from "../shared/ClampedHtml";
 import { Box, Chip, Stack } from "@mui/material";
-import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
+import { COUNTRY_BY_CODE, getFlagEmoji } from "../../constants/countries";
 import { useTranslation } from "react-i18next";
-import formatDateEU from "../utils/formatDateEU";
-import { addLangToPath } from "../utils/langUrl";
+import formatDateEU from "../../utils/formatDateEU";
+import { addLangToPath } from "../../utils/langUrl";
 
 export default function EventShort({ data }: { data: EventItem }) {
   const { t, i18n } = useTranslation();
   const { _id, images, title, description } = data;
-  const adminToken = useSelector((state: RootState) => state.auth.token); 
-  const isAdmin = !!adminToken
+  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = !!adminToken;
   const dispatch = useDispatch();
 
-  const { del } = useApi(); 
+  const { del } = useApi();
 
   const handleDeleteEvent = async (eventId: string) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
@@ -52,7 +51,6 @@ export default function EventShort({ data }: { data: EventItem }) {
     <Card
       sx={{
         width: "100%",
-        // maxWidth: 379.5,
         margin: 0,
         display: "flex",
         flexDirection: "column",
@@ -153,8 +151,8 @@ export default function EventShort({ data }: { data: EventItem }) {
           <ClampedTitle text={title} lines={2} />
           <ClampedHtml html={DOMPurify.sanitize(description)} lines={4} minHeight="6.2em" />
         </Box>
-        <Button 
-          component={Link} 
+        <Button
+          component={Link}
           to={addLangToPath(`/events/${_id}`, i18n.language)}
           variant="outlined"
           color="primary"

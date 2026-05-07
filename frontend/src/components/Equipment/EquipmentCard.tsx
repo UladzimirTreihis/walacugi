@@ -1,6 +1,6 @@
 import React from "react";
-import type { EquipmentModelItem } from "../types";
-import ProductCard from "./shared/ProductCard";
+import type { EquipmentModelItem } from "../../types";
+import ProductCard from "../shared/ProductCard";
 
 export default function EquipmentCard({ item }: { item: EquipmentModelItem }) {
   return (

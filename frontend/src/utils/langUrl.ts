@@ -1,14 +1,14 @@
-export const LANG_PARAM = "lang";
-export const SUPPORTED_LANGS = ["be", "en", "pl"] as const;
-export type SupportedLang = (typeof SUPPORTED_LANGS)[number];
+import { LOCALES, type Locale } from "../types/localization";
 
-export function normalizeLang(raw: string | null | undefined): SupportedLang | null {
+export const LANG_PARAM = "lang";
+
+export function normalizeLang(raw: string | null | undefined): Locale | null {
   if (!raw) return null;
   const base = raw.toLowerCase().split("-")[0];
-  return SUPPORTED_LANGS.includes(base as SupportedLang) ? (base as SupportedLang) : null;
+  return LOCALES.includes(base as Locale) ? (base as Locale) : null;
 }
 
-export function currentLangFromUrl(search: string = window.location.search): SupportedLang | null {
+export function currentLangFromUrl(search: string = window.location.search): Locale | null {
   const params = new URLSearchParams(search);
   return normalizeLang(params.get(LANG_PARAM));
 }

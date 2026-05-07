@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch, ButtonGroup } from "@mui/material";
+import { Alert, TextField, Button, Box, Typography, CircularProgress, Autocomplete, FormControlLabel, Switch } from "@mui/material";
 import useApi from "../../hooks/useApi";
 import type { RootState } from "../../store/store";
 import SortableImageList from "./SortableImageList";
@@ -14,6 +14,8 @@ import {
 import { displayDateToIso, isoDateToDisplay } from "../../utils/dateDisplay";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
 import { uploadFiles } from "../../utils/uploadFiles";
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 interface EditableImage {
   id: string;
@@ -22,10 +24,23 @@ interface EditableImage {
   file?: File;
 }
 
-type Locale = "be" | "en" | "pl";
-type LocalizedText = Record<Locale, string>;
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+interface EventLocalizedResponse {
+  title?: LocalizedText;
+  description?: LocalizedText;
+  budget?: string;
+  currency?: string;
+  startDate?: string;
+  endDate?: string;
+  datedAt?: string;
+  approxDate?: LocalizedText;
+  countries?: string[];
+  location?: LocalizedText;
+  ageRestriction?: LocalizedText;
+  chatLink?: string;
+  difficultyLevel?: number;
+  pinned?: boolean;
+  images?: string[];
+}
 
 export default function AdminEditEventForm() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -56,8 +71,8 @@ export default function AdminEditEventForm() {
       navigate("/admin/login");
       return;
     }
-    get(`/admin/events/${eventId}/localized`, { Authorization: `Bearer ${adminToken}` })
-      .then((data: any) => {
+    get<EventLocalizedResponse>(`/admin/events/${eventId}/localized`, { Authorization: `Bearer ${adminToken}` })
+      .then((data) => {
         if (data) {
           setTitle(data.title || { ...EMPTY_LOCALIZED });
           setDescription(data.description || { ...EMPTY_LOCALIZED });
@@ -253,13 +268,7 @@ export default function AdminEditEventForm() {
       )}
 
       <Box sx={{ mb: 1, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-        <ButtonGroup size="small" variant="outlined">
-          {LOCALES.map((locale) => (
-            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-              {locale.toUpperCase()}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
         <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
           Use AI to translate the content
         </Button>

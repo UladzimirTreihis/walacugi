@@ -9,7 +9,7 @@ import { addLangToPath } from "../utils/langUrl";
 
 function Navbar() {
   const { t, i18n } = useTranslation();
-  const adminToken = useSelector((state: RootState) => state.auth.token); // Get token from Redux
+  const adminToken = useSelector((state: RootState) => state.auth.token);
   const cartCount = useSelector((state: RootState) => state.checkout.items.length);
 
   return (

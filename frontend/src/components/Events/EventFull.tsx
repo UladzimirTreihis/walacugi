@@ -3,25 +3,24 @@ import { useParams } from "react-router-dom";
 import { Box, Typography, Container, Chip, Stack, Divider, Button } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchEvents } from "../store/eventsSlice";
+import { fetchEvents } from "../../store/eventsSlice";
 import DOMPurify from "dompurify";
-import type { RootState } from "../store/store";
-import { COUNTRY_BY_CODE, getFlagEmoji } from "../constants/countries";
-import formatDateEU from "../utils/formatDateEU";
+import type { AppDispatch, RootState } from "../../store/store";
+import { COUNTRY_BY_CODE, getFlagEmoji } from "../../constants/countries";
+import formatDateEU from "../../utils/formatDateEU";
 import { useTranslation } from "react-i18next";
 
 export default function EventFull() {
   const { t, i18n } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const eventsList = useSelector((state: RootState) => state.events.items);
   const loading = useSelector((state: RootState) => state.events.loading);
   const error = useSelector((state: RootState) => state.events.error);
   const event = eventsList.find((item) => item._id === eventId);
 
   useEffect(() => {
-    // @ts-expect-error thunk typing
-    dispatch(fetchEvents(i18n.language));
+    void dispatch(fetchEvents(i18n.language));
   }, [dispatch, i18n.language]);
 
   if (loading) return <p>Loading...</p>;

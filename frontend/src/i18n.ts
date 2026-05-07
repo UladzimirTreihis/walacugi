@@ -4,22 +4,20 @@ import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import pl from "./locales/pl.json";
 import be from "./locales/be.json";
-
-const SUPPORTED_LANGS = ["en", "pl", "be"] as const;
-type SupportedLang = (typeof SUPPORTED_LANGS)[number];
+import { LOCALES, type Locale } from "./types/localization";
 
 const STORAGE_KEY = "walacugi.lang";
 const URL_PARAM = "lang";
 
-function normalizeLang(raw: string | null): SupportedLang | null {
+function normalizeLang(raw: string | null): Locale | null {
   if (!raw) return null;
   const base = raw.toLowerCase().split("-")[0];
-  return SUPPORTED_LANGS.includes(base as SupportedLang) ? (base as SupportedLang) : null;
+  return LOCALES.includes(base as Locale) ? (base as Locale) : null;
 }
 
-function resolveBrowserLang(): SupportedLang {
+function resolveBrowserLang(): Locale {
   const candidates = navigator.languages?.length ? navigator.languages : [navigator.language];
-  const normalized = candidates.map((candidate) => normalizeLang(candidate)).filter(Boolean) as SupportedLang[];
+  const normalized = candidates.map((candidate) => normalizeLang(candidate)).filter(Boolean) as Locale[];
   if (normalized.includes("pl")) return "pl";
   if (normalized.some((lang) => lang === "be")) return "be";
 
@@ -29,19 +27,19 @@ function resolveBrowserLang(): SupportedLang {
   return "en";
 }
 
-function getUrlLang(): SupportedLang | null {
+function getUrlLang(): Locale | null {
   const params = new URLSearchParams(window.location.search);
   return normalizeLang(params.get(URL_PARAM));
 }
 
-function setUrlLang(lang: SupportedLang) {
+function setUrlLang(lang: Locale) {
   const url = new URL(window.location.href);
   if (url.searchParams.get(URL_PARAM) === lang) return;
   url.searchParams.set(URL_PARAM, lang);
   window.history.replaceState(window.history.state, "", url.toString());
 }
 
-function resolveInitialLang(): SupportedLang {
+function resolveInitialLang(): Locale {
   const fromUrl = getUrlLang();
   if (fromUrl) return fromUrl;
 

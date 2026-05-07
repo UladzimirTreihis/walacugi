@@ -19,7 +19,32 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       "no-undef": "off",
-      "@typescript-eslint/no-explicit-any": "off"
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-ignore": true,
+          minimumDescriptionLength: 6
+        }
+      ],
+      "@typescript-eslint/naming-convention": [
+        "warn",
+        {
+          selector: "typeLike",
+          format: ["PascalCase"]
+        },
+        {
+          selector: "function",
+          format: ["camelCase", "PascalCase"]
+        },
+        {
+          selector: "variable",
+          format: ["camelCase", "UPPER_CASE", "PascalCase"],
+          leadingUnderscore: "allow"
+        }
+      ],
+      "@typescript-eslint/no-floating-promises": "warn"
     }
   },
   eslintConfigPrettier

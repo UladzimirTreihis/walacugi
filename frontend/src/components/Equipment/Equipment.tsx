@@ -14,11 +14,11 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import EquipmentCard from "./EquipmentCard";
-import DateInputWithPicker from "./shared/DateInputWithPicker";
-import { fetchEquipment } from "../store/equipmentSlice";
-import type { AppDispatch, RootState } from "../store/store";
-import type { CategoryItem, EquipmentModelItem } from "../types";
-import { displayDateToIso } from "../utils/dateDisplay";
+import DateInputWithPicker from "../shared/DateInputWithPicker";
+import { fetchEquipment } from "../../store/equipmentSlice";
+import type { AppDispatch, RootState } from "../../store/store";
+import type { CategoryItem, EquipmentModelItem } from "../../types";
+import { displayDateToIso } from "../../utils/dateDisplay";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -60,7 +60,7 @@ export default function Equipment() {
     setDateTo("");
   };
 
-  const oneDateOnly = Boolean(dateFrom.trim() || dateTo.trim()) && !Boolean(displayDateToIso(dateFrom) && displayDateToIso(dateTo));
+  const oneDateOnly = Boolean(dateFrom.trim() || dateTo.trim()) && !(displayDateToIso(dateFrom) && displayDateToIso(dateTo));
 
   return (
     <Container sx={{ py: 10 }}>

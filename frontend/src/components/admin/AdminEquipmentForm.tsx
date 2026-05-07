@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Box, Button, ButtonGroup, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import useApi from "../../hooks/useApi";
-import type { CategoryItem, EquipmentModelItem, LocalizedText } from "../../types";
+import type { CategoryItem, EquipmentModelItem } from "../../types";
 import SortableImageList from "./SortableImageList";
 import CategoryMultiField from "./CategoryMultiField";
 import { DEFAULT_REQUEST_ERROR_MESSAGE, type UiFeedback } from "../../utils/feedback";
@@ -11,10 +11,8 @@ import { uploadFiles } from "../../utils/uploadFiles";
 import { useTranslation } from "react-i18next";
 import { addLangToPath } from "../../utils/langUrl";
 import type { RootState } from "../../store/store";
-
-type Locale = "be" | "en" | "pl";
-const LOCALES: Locale[] = ["be", "en", "pl"];
-const EMPTY_LOCALIZED: LocalizedText = { be: "", en: "", pl: "" };
+import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
+import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
 
 export default function AdminEquipmentForm() {
   const { i18n } = useTranslation();
@@ -172,13 +170,7 @@ export default function AdminEquipmentForm() {
       )}
       <Stack spacing={1.5}>
         <CategoryMultiField value={categoryIds} onChange={setCategoryIds} categories={allCategories} disabled={loading} />
-        <ButtonGroup size="small" variant="outlined">
-          {LOCALES.map((locale) => (
-            <Button key={locale} variant={activeLocale === locale ? "contained" : "outlined"} onClick={() => setActiveLocale(locale)}>
-              {locale.toUpperCase()}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <LocaleButtonGroup activeLocale={activeLocale} onChange={setActiveLocale} />
         <Button variant="outlined" onClick={handleAutoTranslate} disabled={loading}>
           Use AI to translate the content
         </Button>

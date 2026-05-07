@@ -7,13 +7,10 @@ import dayjs, { type Dayjs } from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import useApi from "../hooks/useApi";
-import type { EquipmentAvailabilityItem, EquipmentModelItem, EquipmentUnitItem } from "../types";
-import { addToCheckout } from "../store/checkoutSlice";
-import type { AppDispatch } from "../store/store";
-import { DEFAULT_REQUEST_ERROR_MESSAGE } from "../utils/feedback";
-import type { UiFeedback } from "../utils/feedback";
-
+import useApi from "../../hooks/useApi";
+import type { EquipmentAvailabilityItem, EquipmentModelItem, EquipmentUnitItem } from "../../types";
+import { addToCheckout } from "../../store/checkoutSlice";
+import type { AppDispatch } from "../../store/store";
 
 interface DetailsResponse {
   model: EquipmentModelItem;
@@ -54,7 +51,6 @@ export default function EquipmentDetail() {
   const [startDateIso, setStartDateIso] = useState("");
   const [endDateIso, setEndDateIso] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
-  const [feedback, setFeedback] = useState<UiFeedback | null>(null);
   const selectedUnit = useMemo(() => units.find((u) => u._id === selectedUnitId) ?? null, [selectedUnitId, units]);
   const hasRangeConflict = useMemo(() => {
     if (!startDateIso || !endDateIso) return false;
@@ -124,10 +120,6 @@ export default function EquipmentDetail() {
         endDate: endDateIso
       })
     );
-    setFeedback({
-      severity: "success",
-      message: t("equipment.add_to_cart_success")
-    });
   };
 
   const shouldDisableStartDate = (value: Dayjs) => {
