@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { Alert, Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import dayjs, { type Dayjs } from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -10,7 +10,8 @@ import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import useApi from "../../hooks/useApi";
 import type { EquipmentAvailabilityItem, EquipmentModelItem, EquipmentUnitItem } from "../../types";
 import { addToCheckout } from "../../store/checkoutSlice";
-import type { AppDispatch } from "../../store/store";
+import type { AppDispatch, RootState } from "../../store/store";
+import type { UiFeedback } from "../../utils/feedback";
 
 interface DetailsResponse {
   model: EquipmentModelItem;
@@ -44,6 +45,7 @@ export default function EquipmentDetail() {
   const location = useLocation();
   const { get } = useApi();
   const dispatch = useDispatch<AppDispatch>();
+  const checkoutItems = useSelector((state: RootState) => state.checkout.items);
   const [model, setModel] = useState<EquipmentModelItem | null>(null);
   const [units, setUnits] = useState<EquipmentUnitItem[]>([]);
   const [availability, setAvailability] = useState<Record<string, EquipmentAvailabilityItem>>({});
@@ -51,6 +53,7 @@ export default function EquipmentDetail() {
   const [startDateIso, setStartDateIso] = useState("");
   const [endDateIso, setEndDateIso] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [feedback, setFeedback] = useState<UiFeedback | null>(null);
   const selectedUnit = useMemo(() => units.find((u) => u._id === selectedUnitId) ?? null, [selectedUnitId, units]);
   const hasRangeConflict = useMemo(() => {
     if (!startDateIso || !endDateIso) return false;
@@ -107,6 +110,13 @@ export default function EquipmentDetail() {
 
   const handleAdd = () => {
     if (!model || !selectedUnit || !startDateIso || !endDateIso || hasRangeConflict) return;
+    const alreadyInCart = checkoutItems.some(
+      (item) => item.unitId === selectedUnit._id && item.startDate === startDateIso && item.endDate === endDateIso
+    );
+    if (alreadyInCart) {
+      setFeedback({ severity: "info", message: t("cart.already_in_cart") });
+      return;
+    }
     dispatch(
       addToCheckout({
         unitId: selectedUnit._id,
@@ -120,6 +130,7 @@ export default function EquipmentDetail() {
         endDate: endDateIso
       })
     );
+    setFeedback({ severity: "success", message: t("cart.added_to_cart") });
   };
 
   const shouldDisableStartDate = (value: Dayjs) => {
@@ -198,6 +209,11 @@ export default function EquipmentDetail() {
       {hasRangeConflict && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {t("equipment.range_conflict")}
+        </Alert>
+      )}
+      {feedback && (
+        <Alert severity={feedback.severity} sx={{ mb: 2 }}>
+          {feedback.message}
         </Alert>
       )}
 

@@ -61,6 +61,8 @@
     "title": "Koszyk",
     "note": "Prosimy podzielić się linkiem do koszyka z naszymi administratorami, aby potwierdzić rezerwację. Jeśli używasz Telegram, podziel się na @walacugi.",
     "add_to_cart": "Dodaj do koszyka",
+    "added_to_cart": "Dodano do koszyka.",
+    "already_in_cart": "Ten egzemplarz dla wybranych dat jest już w Twoim koszyku.",
     "check_link": "Sprawdź mój link do koszyka",
     "link_placeholder": "Wklej URL koszyka",
     "see_saved": "Zobacz koszyk",

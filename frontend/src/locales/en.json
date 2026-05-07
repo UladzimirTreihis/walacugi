@@ -61,6 +61,8 @@
     "title": "Cart",
     "note": "Please share the link to your cart to our admins to confirm the booking. If you are using Telegram, please share to @walacugi.",
     "add_to_cart": "Add to cart",
+    "added_to_cart": "Added to cart successfully.",
+    "already_in_cart": "This unit for selected dates is already in your cart.",
     "check_link": "Check my cart link",
     "link_placeholder": "Paste cart URL",
     "see_saved": "See cart",
