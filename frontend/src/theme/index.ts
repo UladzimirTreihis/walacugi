@@ -4,25 +4,25 @@ import { createTheme as createBaseTheme } from "@mui/material/styles";
 
 export type AppColorMode = "light" | "dark";
 
-const spacingStep = 4; // 4px scale for friendlier, modern rhythm
-const radius = 10; // slightly rounded, approachable
+const spacingStep = 4;
+const radius = 10;
 
 const lightPalette: PaletteOptions = {
   mode: "light",
   primary: {
-    main: "#5F97CF", // friendly blue chosen by you
+    main: "#5F97CF",
     light: "#8CB7E0",
     dark: "#2F6FAA",
     contrastText: "#FFFFFF"
   },
   secondary: {
-    main: "#2FBF71", // nature-leaning green accent
+    main: "#2FBF71",
     light: "#79D8A6",
     dark: "#1F8A52",
     contrastText: "#FFFFFF"
   },
   background: {
-    default: "#F6F8FB", // soft paper
+    default: "#F6F8FB",
     paper: "#FFFFFF"
   },
   text: {
@@ -36,23 +36,22 @@ const lightPalette: PaletteOptions = {
   divider: "#E5E9F0"
 };
 
-// Dark mode with black/white/yellow accent (friendly, not harsh)
 const darkPalette: PaletteOptions = {
   mode: "dark",
   primary: {
-    main: "#FFE066", // warm yellow accent (readable on dark)
+    main: "#FFE066",
     light: "#FFF2AD",
     dark: "#E6C74D",
     contrastText: "#1A1C1E"
   },
   secondary: {
-    main: "#7FB8E8", // subtle blue to keep brand continuity
+    main: "#7FB8E8",
     light: "#A9D0F1",
     dark: "#4F90C4",
     contrastText: "#0E1113"
   },
   background: {
-    default: "#0E1113", // near-black graphite
+    default: "#0E1113",
     paper: "#15191C"
   },
   text: {
@@ -66,7 +65,6 @@ const darkPalette: PaletteOptions = {
   divider: "#262B30"
 };
 
-// Shared typography: modern, approachable
 const typography: ThemeOptions["typography"] = {
   fontFamily:
     'Inter, "Helvetica Neue", Helvetica, Arial, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Liberation Sans", sans-serif',
@@ -90,7 +88,6 @@ const typography: ThemeOptions["typography"] = {
   overline: { fontSize: "0.75rem", letterSpacing: 1, textTransform: "uppercase" }
 };
 
-// Shadows tuned for friendliness (soft, not too stark)
 const base = createBaseTheme();
 const shadows = [...base.shadows];
 shadows[1] = "0px 4px 8px 0px rgba(0,0,0,0.06)";
