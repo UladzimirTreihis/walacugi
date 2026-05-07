@@ -41,7 +41,7 @@ export default function AdminEditEquipmentForm() {
   const { modelId } = useParams<{ modelId: string }>();
   const navigate = useNavigate();
   const { get, put, post, del, loading, error } = useApi();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const [model, setModel] = useState<EquipmentModelItem | null>(null);
   const [units, setUnits] = useState<EquipmentUnitItem[]>([]);
   const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
@@ -195,7 +195,7 @@ export default function AdminEditEquipmentForm() {
   };
 
   const handleAutoTranslate = async () => {
-    if (!adminToken) {
+    if (!isAdmin) {
       setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
       return;
     }
@@ -212,8 +212,7 @@ export default function AdminEditEquipmentForm() {
           description: description.be,
           size: size.be
         }
-      },
-      { Authorization: `Bearer ${adminToken}` }
+      }
     );
     if (!result) {
       setFeedback({ severity: "error", message: "AI translation failed. Please try again." });

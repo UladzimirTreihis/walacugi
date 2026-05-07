@@ -8,13 +8,11 @@ import type { RootState } from "../../store/store";
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const token = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
 
   useEffect(() => {
-    if (token) {
-      setIsLoggedIn(true);
-    }
-  }, [token]);
+    setIsLoggedIn(isAdmin);
+  }, [isAdmin]);
 
   return (
     <div>

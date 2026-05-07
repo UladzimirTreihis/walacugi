@@ -46,7 +46,7 @@ export default function AdminEditEventForm() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { get, put, post, loading, error } = useApi();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
 
   const [activeLocale, setActiveLocale] = useState<Locale>("be");
   const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
@@ -67,11 +67,11 @@ export default function AdminEditEventForm() {
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   useEffect(() => {
-    if (!adminToken) {
+    if (!isAdmin) {
       navigate("/admin/login");
       return;
     }
-    get<EventLocalizedResponse>(`/admin/events/${eventId}/localized`, { Authorization: `Bearer ${adminToken}` })
+    get<EventLocalizedResponse>(`/admin/events/${eventId}/localized`)
       .then((data) => {
         if (data) {
           setTitle(data.title || { ...EMPTY_LOCALIZED });
@@ -98,7 +98,7 @@ export default function AdminEditEventForm() {
         }
       })
       .catch((err) => console.error("Failed to fetch event:", err));
-  }, [eventId, adminToken, navigate]);
+  }, [eventId, isAdmin, navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -115,7 +115,7 @@ export default function AdminEditEventForm() {
   async function handleUpdateEvent() {
     setFeedback(null);
     try {
-      if (!adminToken) {
+      if (!isAdmin) {
         return;
       }
       if (!title.be.trim()) {
@@ -129,8 +129,7 @@ export default function AdminEditEventForm() {
       const uploadedImages = await uploadFiles(
         newImages.map((item) => item.file as File),
         "/upload/event-image",
-        post,
-        { Authorization: `Bearer ${adminToken}` }
+        post
       );
       if (uploadedImages.length !== newImages.length) {
         setFeedback({
@@ -166,9 +165,7 @@ export default function AdminEditEventForm() {
           .map((item) => item.existingPath ?? uploadedById.get(item.id) ?? "")
           .filter((path) => path.length > 0),
       };
-      const result = await put(`/events/${eventId}`, updatedEvent, {
-        Authorization: `Bearer ${adminToken}`,
-      });
+      const result = await put(`/events/${eventId}`, updatedEvent);
       if (!result) {
         setFeedback({
           severity: "error",
@@ -208,7 +205,7 @@ export default function AdminEditEventForm() {
   };
 
   const handleAutoTranslate = async () => {
-    if (!adminToken) {
+    if (!isAdmin) {
       setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
       return;
     }
@@ -233,8 +230,7 @@ export default function AdminEditEventForm() {
           approxDate: approxDate.be,
           ageRestriction: ageRestriction.be
         }
-      },
-      { Authorization: `Bearer ${adminToken}` }
+      }
     );
     if (!result) {
       setFeedback({ severity: "error", message: "AI translation failed. Please try again." });

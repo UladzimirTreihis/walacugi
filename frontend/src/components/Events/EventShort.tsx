@@ -19,8 +19,7 @@ import { addLangToPath } from "../../utils/langUrl";
 export default function EventShort({ data }: { data: EventItem }) {
   const { t, i18n } = useTranslation();
   const { _id, images, title, description } = data;
-  const adminToken = useSelector((state: RootState) => state.auth.token);
-  const isAdmin = !!adminToken;
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const dispatch = useDispatch();
 
   const { del } = useApi();
@@ -28,9 +27,7 @@ export default function EventShort({ data }: { data: EventItem }) {
   const handleDeleteEvent = async (eventId: string) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
 
-    const response = await del(`/events/${eventId}`, {
-      "x-admin-token": adminToken ?? ""
-    });
+    const response = await del(`/events/${eventId}`);
 
     if (response) {
       dispatch(deleteEvent(eventId));

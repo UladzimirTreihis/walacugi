@@ -33,7 +33,7 @@ export default function AdminEditNewsForm() {
   const { newsId } = useParams<{ newsId: string }>();
   const navigate = useNavigate();
   const { get, put, post, loading, error } = useApi();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
 
   const [activeLocale, setActiveLocale] = useState<Locale>("be");
   const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
@@ -46,11 +46,11 @@ export default function AdminEditNewsForm() {
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
 
   useEffect(() => {
-    if (!adminToken) {
+    if (!isAdmin) {
       navigate("/admin/login");
       return;
     }
-    get<NewsLocalizedResponse>(`/admin/news/${newsId}/localized`, { Authorization: `Bearer ${adminToken}` })
+    get<NewsLocalizedResponse>(`/admin/news/${newsId}/localized`)
       .then((data) => {
         if (data) {
           setTitle(data.title || { ...EMPTY_LOCALIZED });
@@ -69,7 +69,7 @@ export default function AdminEditNewsForm() {
         }
       })
       .catch((err) => console.error("Failed to fetch news:", err));
-  }, [newsId, adminToken, navigate]);
+  }, [newsId, isAdmin, navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -86,7 +86,7 @@ export default function AdminEditNewsForm() {
   async function handleUpdateNews() {
     setFeedback(null);
     try {
-      if (!adminToken) {
+      if (!isAdmin) {
         return;
       }
       if (!title.be.trim() || !description.be.trim()) {
@@ -100,8 +100,7 @@ export default function AdminEditNewsForm() {
       const uploadedImages = await uploadFiles(
         newImages.map((item) => item.file as File),
         "/upload/news-image",
-        post,
-        { Authorization: `Bearer ${adminToken}` }
+        post
       );
       if (uploadedImages.length !== newImages.length) {
         setFeedback({
@@ -127,9 +126,7 @@ export default function AdminEditNewsForm() {
         location,
         countries
       };
-      const result = await put(`/news/${newsId}`, updatedNews, {
-        Authorization: `Bearer ${adminToken}`,
-      });
+      const result = await put(`/news/${newsId}`, updatedNews);
       if (!result) {
         setFeedback({
           severity: "error",
@@ -166,7 +163,7 @@ export default function AdminEditNewsForm() {
   };
 
   const handleAutoTranslate = async () => {
-    if (!adminToken) {
+    if (!isAdmin) {
       setFeedback({ severity: "error", message: "Admin session missing. Please log in again." });
       return;
     }
@@ -183,8 +180,7 @@ export default function AdminEditNewsForm() {
           description: description.be,
           location: location.be
         }
-      },
-      { Authorization: `Bearer ${adminToken}` }
+      }
     );
     if (!result) {
       setFeedback({ severity: "error", message: "AI translation failed. Please try again." });

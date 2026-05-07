@@ -1,31 +1,33 @@
 import { useSelector, useDispatch } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useApi from "../../hooks/useApi";
-import { logout, login } from "../../store/authSlice";
+import { logout } from "../../store/authSlice";
 import type { RootState } from "../../store/store";
 
 export default function ProtectedRoute() {
   const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
-  const token = useSelector((state: RootState) => state.auth.token);
   const dispatch = useDispatch();
-  const { post } = useApi();
+  const { get } = useApi();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
     const verifyToken = async () => {
-      const response = await post<{ valid: boolean }>("/admin/verify-token", { token });
-      if (!response || !response.valid) {
+      const response = await get<{ isAdmin: boolean }>("/admin/me");
+      if (!response?.isAdmin) {
         dispatch(logout());
-      } else {
-        dispatch(login(token));
       }
+      setChecking(false);
     };
-    verifyToken();
-  }, [token, dispatch]);
+    void verifyToken();
+  }, [dispatch, get]);
 
-  if (!token) {
+  if (checking) {
+    return null;
+  }
+
+  if (!isAdmin) {
     return <Navigate to="/login" replace />;
   }
-  return isAdmin ? <Outlet /> : <Navigate to="/login" replace />;
+  return <Outlet />;
 }

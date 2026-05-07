@@ -2,28 +2,31 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 interface AuthState {
   isAdmin: boolean;
-  token: string | null;
+  csrfToken: string | null;
 }
 
 const initialState: AuthState = {
   isAdmin: false,
-  token: null
+  csrfToken: null
 };
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    login: (state, action: PayloadAction<string>) => {
+    login: (state, action: PayloadAction<{ csrfToken: string | null }>) => {
       state.isAdmin = true;
-      state.token = action.payload;
+      state.csrfToken = action.payload.csrfToken;
+    },
+    setCsrfToken: (state, action: PayloadAction<string | null>) => {
+      state.csrfToken = action.payload;
     },
     logout: (state) => {
       state.isAdmin = false;
-      state.token = null;
+      state.csrfToken = null;
     }
   }
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, logout, setCsrfToken } = authSlice.actions;
 export default authSlice.reducer;

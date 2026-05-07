@@ -2,24 +2,27 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import Reservation from "../models/Reservation.js";
 import { checkAdminToken } from "../utils/middleware.js";
+import { HttpError } from "../utils/httpErrors.js";
+import { asyncHandler } from "../utils/errorHandler.js";
 
 const router = Router();
 
-router.get("/", checkAdminToken, async (_req: Request, res: Response) => {
-  try {
+router.get(
+  "/",
+  checkAdminToken,
+  asyncHandler(async (_req: Request, res: Response) => {
     const items = await Reservation.find().sort({ createdAt: -1 });
     res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
-router.put("/:id/status", checkAdminToken, async (req: Request, res: Response) => {
-  try {
+router.put(
+  "/:id/status",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
     const status = String(req.body.status ?? "");
     if (!["hold", "confirmed", "cancelled", "expired"].includes(status)) {
-      res.status(400).json({ error: "Invalid status" });
-      return;
+      throw new HttpError(400, "Invalid status");
     }
     const updated = await Reservation.findByIdAndUpdate(
       req.params.id,
@@ -27,13 +30,10 @@ router.put("/:id/status", checkAdminToken, async (req: Request, res: Response) =
       { new: true }
     );
     if (!updated) {
-      res.status(404).json({ error: "Not found" });
-      return;
+      throw new HttpError(404, "Not found");
     }
     res.json(updated);
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+  })
+);
 
 export default router;

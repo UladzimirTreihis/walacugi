@@ -6,13 +6,16 @@ import { useNavigate } from "react-router-dom";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { addLangToPath } from "../../utils/langUrl";
+import useApi from "../../hooks/useApi";
 
 export default function AdminNavbar() {
   const { i18n } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { post } = useApi();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await post("/admin/logout", {});
     dispatch(logout());
     navigate(addLangToPath("/admin/login", i18n.language));
   };
@@ -47,7 +50,7 @@ export default function AdminNavbar() {
         </Button>
       </Box>
 
-      <Button variant="contained" color="error" onClick={handleLogout}>
+      <Button variant="contained" color="error" onClick={() => void handleLogout()}>
         Logout
       </Button>
     </Box>

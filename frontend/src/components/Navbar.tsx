@@ -9,7 +9,7 @@ import { addLangToPath } from "../utils/langUrl";
 
 function Navbar() {
   const { t, i18n } = useTranslation();
-  const adminToken = useSelector((state: RootState) => state.auth.token);
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const cartCount = useSelector((state: RootState) => state.checkout.items.length);
 
   return (
@@ -53,7 +53,7 @@ function Navbar() {
             </Box>
           )}
         </Button>
-        {adminToken  
+        {isAdmin
         ? <NavbarButton component={Link} variant="contained" to={addLangToPath("/admin", i18n.language)}>{t("admin")}</NavbarButton>
         : ""
         }
