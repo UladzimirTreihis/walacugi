@@ -1,5 +1,6 @@
 import { doubleCsrf } from "csrf-csrf";
 import type { Request } from "express";
+import { cookieSameSite, isCookieSecure } from "./auth.js";
 
 export const CSRF_COOKIE_NAME = "csrf_token";
 
@@ -8,12 +9,12 @@ const {
   generateCsrfToken,
   invalidCsrfTokenError
 } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET ?? "",
+  getSecret: () => process.env.CSRF_SECRET as string,
   getSessionIdentifier: (req: Request) => req.ip ?? "unknown-ip",
   cookieName: CSRF_COOKIE_NAME,
   cookieOptions: {
-    sameSite: "none",
-    secure: true,
+    sameSite: cookieSameSite(),
+    secure: isCookieSecure(),
     httpOnly: false,
     path: "/"
   },

@@ -12,7 +12,7 @@ import { isLocalizedText } from "../utils/localizedFields.js";
 import { HttpError } from "../utils/httpErrors.js";
 import { asyncHandler } from "../utils/errorHandler.js";
 import { loginLimiter } from "../utils/rateLimit.js";
-import { clearAuthCookie, setAuthCookie } from "../utils/auth.js";
+import { clearAuthCookie, cookieSameSite, isCookieSecure, setAuthCookie } from "../utils/auth.js";
 import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
 
 const router = Router();
@@ -70,8 +70,8 @@ router.post(
 router.post("/logout", checkAdminToken, (req: Request, res: Response) => {
   clearAuthCookie(res);
   res.clearCookie(CSRF_COOKIE_NAME, {
-    sameSite: "none",
-    secure: true,
+    sameSite: cookieSameSite(),
+    secure: isCookieSecure(),
     httpOnly: false,
     path: "/"
   });
