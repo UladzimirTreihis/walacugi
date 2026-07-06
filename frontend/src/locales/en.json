@@ -7,6 +7,11 @@
   "admin": "Admin",
   "read_more": "Read More",
   "join_chat": "Join planning chat",
+  "foundation": "Foundation",
+  "nav": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
   "about_body": "<p><strong>Hello everyone!</strong> We are the travel club <b>Walacugi®</b>, where we seek extraordinary adventures, friendly campfires, and the true freedom of traveling.</p> <p>If you share these feelings, we invite you to join our <a href='https://t.me/+z0ExEXWSTwNkMjE0' target='_blank'>Telegram chat “Walacugi®”</a>, where we discuss hiking, water, mountain, and other routes together.</p> <p><b>Our goal</b> is active recreation, love for nature, and positive emotions. Join us if you are ready for new adventures!</p>",
   "common": {
     "view": "View",
@@ -84,5 +89,47 @@
     "confirm_dialog_title": "Confirm booking",
     "confirm_dialog_body": "You are about to confirm {{count}} unit bookings.",
     "confirm_dialog_note": "Overlap and availability checks will run on submit."
+  },
+  "poznajSwiat": {
+    "pageTitle": "Poznaj Świat Foundation | Walacugi",
+    "hero": {
+      "title": "Poznaj Świat Foundation",
+      "subtitle": "The official nonprofit umbrella supporting Walacugi and broader social, educational, and integrative initiatives."
+    },
+    "mission": {
+      "title": "Mission and scope",
+      "body": "<p>The foundation supports initiatives related to active recreation, tourism, family and community integration, education, volunteering, and social inclusion. We create space for projects and events for participants of different ages — in the spirit of public-benefit activity.</p>"
+    },
+    "activities": {
+      "title": "What we do",
+      "items": [
+        "Organize and support integrative trips, workshops, and community events",
+        "Create space for educational, family, and developmental activities",
+        "Engage volunteers and support local community activity",
+        "Cooperate with institutions, partners, and local communities"
+      ]
+    },
+    "formal": {
+      "title": "Formal organization data",
+      "labels": {
+        "fullName": "Full name",
+        "legalForm": "Legal form",
+        "krs": "KRS",
+        "nip": "NIP",
+        "regon": "REGON",
+        "address": "Address",
+        "email": "Email",
+        "phone": "Phone",
+        "phoneSecondary": "Secondary phone"
+      }
+    },
+    "cooperation": {
+      "title": "Cooperation and grants",
+      "body": "<p>If you are contacting us about a grant, institutional partnership, formal project, or cooperation — please reach out to the foundation directly. For club events and everyday Walacugi activities, visit the homepage and events section.</p>"
+    },
+    "cta": {
+      "email": "Contact the foundation",
+      "backToWalacugi": "See Walacugi activities"
+    }
   }
 }

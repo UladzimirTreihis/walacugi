@@ -4,18 +4,19 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { addLangToPath } from "../../utils/langUrl";
 
-interface Props extends ButtonProps {
+interface Props extends Omit<ButtonProps, "onClick"> {
   scrollToId?: string;
   to: string;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
 }
 
-const NavbarButton: React.FC<Props> = ({ children, scrollToId, to, ...props }) => {
+const NavbarButton: React.FC<Props> = ({ children, scrollToId, to, onClick, ...props }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const toWithLang = addLangToPath(to, i18n.language);
 
-  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     if (scrollToId) {
       event.preventDefault();
 
@@ -34,13 +35,14 @@ const NavbarButton: React.FC<Props> = ({ children, scrollToId, to, ...props }) =
         }
       }
     }
+    onClick?.(event);
   };
 
   return (
     <Button
       component={RouterLink}
       to={toWithLang}
-      onClick={scrollToId ? handleClick : undefined}
+      onClick={handleClick}
       {...props}
       sx={{
         margin: 0,
