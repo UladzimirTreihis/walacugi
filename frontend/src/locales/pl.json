@@ -7,6 +7,11 @@
   "admin": "Admin",
   "read_more": "Czytaj więcej",
   "join_chat": "Dołącz do czatu",
+  "foundation": "Fundacja",
+  "nav": {
+    "openMenu": "Otwórz menu",
+    "closeMenu": "Zamknij menu"
+  },
   "about_body": "<p><strong>Cześć wszystkim!</strong> Jesteśmy klubem turystycznym <b>Walacugi®</b>, gdzie szukamy niezwykłych przygód, przyjaznych ognisk i prawdziwej wolności podróżowania.</p> <p>Jeśli podzielasz te odczucia, zapraszamy do naszego <a href='https://t.me/+z0ExEXWSTwNkMjE0' target='_blank'>czatu Telegram „Walacugi®”</a>, gdzie wspólnie omawiamy piesze, wodne, górskie i inne trasy.</p> <p><b>Naszym celem</b> jest aktywny wypoczynek, miłość do natury i pozytywne emocje. Dołącz do nas, jeśli jesteś gotowy na nowe przygody!</p>",
   "common": {
     "view": "Zobacz",
@@ -84,5 +89,47 @@
     "confirm_dialog_title": "Potwierdź rezerwację",
     "confirm_dialog_body": "Zaraz potwierdzisz {{count}} rezerwacji egzemplarzy.",
     "confirm_dialog_note": "Przy wysłaniu zostaną sprawdzone nakładanie terminów i dostępność."
+  },
+  "poznajSwiat": {
+    "pageTitle": "Fundacja Poznaj Świat | Walacugi",
+    "hero": {
+      "title": "Fundacja Poznaj Świat",
+      "subtitle": "Oficjalna organizacja non-profit wspierająca Walacugi oraz szersze inicjatywy społeczne, edukacyjne i integracyjne."
+    },
+    "mission": {
+      "title": "Misja i zakres działalności",
+      "body": "<p>Fundacja wspiera inicjatywy związane z aktywnym wypoczynkiem, turystyką, integracją rodzin i społeczności, edukacją, wolontariatem oraz włączeniem społecznym. Tworzymy przestrzeń dla projektów i wydarzeń dla uczestników w różnym wieku — w duchu działalności pożytku publicznego.</p>"
+    },
+    "activities": {
+      "title": "Czym się zajmujemy",
+      "items": [
+        "Organizujemy i wspieramy wyjazdy integracyjne, warsztaty oraz wydarzenia społeczne",
+        "Tworzymy przestrzeń dla działań edukacyjnych, rodzinnych i rozwojowych",
+        "Angażujemy wolontariuszy i wspieramy aktywność lokalnych społeczności",
+        "Współpracujemy z instytucjami, partnerami i organizacjami lokalnymi"
+      ]
+    },
+    "formal": {
+      "title": "Dane formalne",
+      "labels": {
+        "fullName": "Pełna nazwa",
+        "legalForm": "Forma prawna",
+        "krs": "KRS",
+        "nip": "NIP",
+        "regon": "REGON",
+        "address": "Adres",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "phoneSecondary": "Telefon dodatkowy"
+      }
+    },
+    "cooperation": {
+      "title": "Współpraca i granty",
+      "body": "<p>Jeśli kontaktujesz się w sprawie grantu, partnerstwa instytucjonalnego, projektu formalnego lub współpracy — napisz bezpośrednio do fundacji. W sprawach udziału w wydarzeniach klubowych i codziennej aktywności Walacugi zapraszamy na stronę główną i sekcję wydarzeń.</p>"
+    },
+    "cta": {
+      "email": "Napisz do fundacji",
+      "backToWalacugi": "Zobacz działania Walacugi"
+    }
   }
 }

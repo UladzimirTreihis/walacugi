@@ -27,6 +27,7 @@ import Equipment from "./components/Equipment/Equipment";
 import EquipmentDetail from "./components/Equipment/EquipmentDetail";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
+import PoznajSwiatPage from "./components/PoznajSwiat/PoznajSwiatPage";
 
 const theme = createAppTheme("light");
 
@@ -138,6 +139,16 @@ const router = createBrowserRouter([
       {
         path: "/checkout",
         element: <Checkout />
+      }
+    ]
+  },
+  {
+    path: "/poznaj-swiat",
+    element: <Root />,
+    children: [
+      {
+        path: "/poznaj-swiat",
+        element: <PoznajSwiatPage />
       }
     ]
   },
