@@ -14,6 +14,7 @@ import { asyncHandler } from "../utils/errorHandler.js";
 import { loginLimiter } from "../utils/rateLimit.js";
 import { clearAuthCookie, cookieSameSite, isCookieSecure, setAuthCookie } from "../utils/auth.js";
 import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
+import { coerceTranslatedField } from "../utils/coerceTranslatedField.js";
 
 const router = Router();
 
@@ -172,11 +173,14 @@ router.post(
       }
     }
 
+    const fieldList = fields.join(", ");
     const prompt = [
       "Translate the provided JSON field values from source language to English and Polish.",
       "Source is in key `be` and may be Belarusian or Russian.",
       "Output must be valid JSON only, no markdown.",
-      "Return shape: {\"en\": { ...same fields... }, \"pl\": { ...same fields... }}.",
+      `Return shape: {"en": { ... }, "pl": { ... }} using these exact keys in both objects: ${fieldList}.`,
+      "Every value MUST be a plain string; never an object, array, or null. Use \"\" if empty.",
+      "Do not rename, nest, or omit keys.",
       "Preserve HTML tags and structure exactly.",
       "Preserve links, URLs, emojis, placeholders, numbers, and punctuation intent.",
       "Preserve the tone and style of the source text."
@@ -230,18 +234,13 @@ router.post(
     const translated = parsedOut as Record<string, unknown>;
     const en = translated.en as Record<string, unknown> | undefined;
     const pl = translated.pl as Record<string, unknown> | undefined;
-    if (!en || !pl || typeof en !== "object" || typeof pl !== "object") {
+    if (!en || !pl || typeof en !== "object" || typeof pl !== "object" || Array.isArray(en) || Array.isArray(pl)) {
       throw new HttpError(502, "Translation response must include en/pl objects");
-    }
-    for (const field of fields) {
-      if (typeof en[field] !== "string" || typeof pl[field] !== "string") {
-        throw new HttpError(502, `Invalid translated field: ${field}`);
-      }
     }
 
     res.json({
-      en: Object.fromEntries(fields.map((f) => [f, String(en[f])])) as Record<string, string>,
-      pl: Object.fromEntries(fields.map((f) => [f, String(pl[f])])) as Record<string, string>
+      en: Object.fromEntries(fields.map((f) => [f, coerceTranslatedField(en[f])])) as Record<string, string>,
+      pl: Object.fromEntries(fields.map((f) => [f, coerceTranslatedField(pl[f])])) as Record<string, string>
     });
   })
 );
