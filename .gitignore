@@ -163,3 +163,6 @@ backend/uploads        # Ignore uploaded images (if using S3)
 backend/.env          # Do NOT push credentials
 backend/*.log
 backend/*.db
+
+# Ignore agent mds
+content_agents/*.md
