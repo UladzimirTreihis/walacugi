@@ -29,6 +29,7 @@ import EquipmentDetail from "./components/Equipment/EquipmentDetail";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 import PoznajSwiatPage from "./components/PoznajSwiat/PoznajSwiatPage";
+import EventsCalendarPage from "./components/Calendar/EventsCalendarPage";
 
 const theme = createAppTheme("light");
 
@@ -96,6 +97,16 @@ const router = createBrowserRouter([
       {
         path: "/events/:eventId",
         element: <EventFull />
+      }
+    ]
+  },
+  {
+    path: "/calendar",
+    element: <Root />,
+    children: [
+      {
+        path: "/calendar",
+        element: <EventsCalendarPage />
       }
     ]
   },

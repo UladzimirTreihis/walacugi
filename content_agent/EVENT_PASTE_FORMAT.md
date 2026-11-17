@@ -24,9 +24,9 @@ more lines ok
 6. Locales: always fill **be**, **en**, and **pl** for every localized field (use `""` empty only when truly unknown — prefer translating).
 7. Dates must be `yyyy-mm-dd` or empty. Provide **at least one** of `startDate` or `datedAt`.
 8. `countries`: lowercase ISO-ish codes, comma-separated, no spaces required (`es` or `es,pt`). Use codes from `content_agent/countries.json` (Belarus = `by`, Belgium = `be`).
-9. `difficultyLevel`: integer 1–5.
-10. `pinned`: `true` or `false`.
-11. `currency`: short code like `EUR`.
+9. `difficultyLevel`: integer 1–5. If not provided, estimate.
+10. `pinned`: `true` or `false`. Default false unless specified otherwise.
+11. `currency`: short code like `EUR`. Assume EUR as default if not specified.
 12. `budget`: number or short range as text (`490` or `300-500`).
 13. Do **not** invent `images`. Do **not** add extra keys.
 14. HTML in descriptions is allowed (`<p>`, `<strong>`, `<br>`, lists, links). Keep structure parallel across be/en/pl.

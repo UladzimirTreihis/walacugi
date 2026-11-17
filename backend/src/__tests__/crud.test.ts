@@ -109,3 +109,22 @@ void test("POST /api/events creates an event and is fetchable by id", async () =
   const stored = await Event.find({});
   assert.equal(stored.length, 1);
 });
+
+void test("GET /api/events/calendar returns events without the 14-day filter", async () => {
+  const app = buildApp({ disableRateLimiting: true });
+  const { agent, csrfToken } = await loginAsAdmin(app);
+  const oldDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+  await agent
+    .post("/api/events")
+    .set("X-CSRF-Token", csrfToken)
+    .send({ ...EVENT_LOCALIZED, datedAt: oldDate.toISOString().slice(0, 10), title: { ...LOCALIZED, be: "Old trip" } });
+
+  const list = await request(app).get("/api/events?lang=be");
+  assert.equal(list.status, 200);
+  assert.equal(list.body.length, 0);
+
+  const calendar = await request(app).get("/api/events/calendar?lang=be");
+  assert.equal(calendar.status, 200);
+  assert.equal(calendar.body.length, 1);
+  assert.equal(calendar.body[0].title, "Old trip");
+});
