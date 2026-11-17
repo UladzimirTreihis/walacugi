@@ -19,6 +19,7 @@ import AdminNewsForm from "./components/admin/AdminNewsForm";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import AdminLogin from "./components/admin/AdminLogin";
 import AdminEventsForm from "./components/admin/AdminEventsForm";
+import AdminEventPasteForm from "./components/admin/AdminEventPasteForm";
 import AdminEditEventForm from "./components/admin/AdminEditEventForm";
 import AdminEquipmentForm from "./components/admin/AdminEquipmentForm";
 import AdminEditEquipmentForm from "./components/admin/AdminEditEquipmentForm";
@@ -63,6 +64,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/events/create",
             element: <AdminEventsForm />
+          },
+          {
+            path: "/admin/events/import",
+            element: <AdminEventPasteForm />
           },
           {
             path: "/admin/equipment/create",

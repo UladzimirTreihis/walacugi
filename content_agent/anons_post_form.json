@@ -1,0 +1,286 @@
+{
+  "$schema_note": "Agent-facing contract for creating anons posts (Events). Source of truth for the admin Create Event form UI and POST /api/events payload.",
+  "entity": "Event",
+  "aliases": ["anon", "anons", "announcement", "trip post"],
+  "ui": {
+    "route": "/admin/events/create",
+    "component": "frontend/src/components/admin/AdminEventsForm.tsx",
+    "edit_component": "frontend/src/components/admin/AdminEditEventForm.tsx"
+  },
+  "api": {
+    "create": { "method": "POST", "path": "/api/events", "auth": "admin cookie + CSRF" },
+    "update": { "method": "PUT", "path": "/api/events/:id", "auth": "admin cookie + CSRF" },
+    "get_public": { "method": "GET", "path": "/api/events?lang=be|en|pl" },
+    "get_admin_localized": { "method": "GET", "path": "/api/admin/events/:id/localized" },
+    "upload_images": {
+      "method": "POST",
+      "path": "/api/upload/event-image",
+      "multipart_field": "images",
+      "max_files": 10,
+      "max_size_mb": 20,
+      "mime": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+      "response": { "filePaths": ["string (public URL)"] }
+    },
+    "translate": {
+      "method": "POST",
+      "path": "/api/admin/translate-localized",
+      "body": {
+        "entity": "event",
+        "source": {
+          "title": "string (Belarusian)",
+          "description": "string (Belarusian)",
+          "location": "string (Belarusian)",
+          "approxDate": "string (Belarusian)",
+          "ageRestriction": "string (Belarusian)"
+        }
+      },
+      "returns": { "en": "LocalizedText fields", "pl": "LocalizedText fields" }
+    }
+  },
+  "locales": {
+    "supported": ["be", "en", "pl"],
+    "source": "be",
+    "note": "(BE)/(EN)/(PL) in UI labels = active locale. be = Belarusian (not Belgium). Country code 'be' is Belgium."
+  },
+  "types": {
+    "LocalizedText": {
+      "shape": { "be": "string", "en": "string", "pl": "string" },
+      "empty": { "be": "", "en": "", "pl": "" },
+      "rule": "API requires all three keys as strings; empty strings are allowed unless noted."
+    }
+  },
+  "form_layout": [
+    { "row": ["title"] },
+    { "row": ["location"] },
+    { "row": ["budget", "currency"] },
+    { "row": ["startDate", "datedAt"] },
+    { "row": ["endDate"] },
+    { "row": ["approxDate"] },
+    { "row": ["countries"] },
+    { "row": ["ageRestriction"] },
+    { "row": ["pinned"] },
+    { "row": ["chatLink"] },
+    { "row": ["difficultyLevel"] },
+    { "row": ["description"] },
+    { "row": ["images"] }
+  ],
+  "fields": [
+    {
+      "id": "title",
+      "ui_label": "Title (BE|EN|PL)",
+      "api_key": "title",
+      "type": "LocalizedText",
+      "control": "text",
+      "default": { "be": "", "en": "", "pl": "" },
+      "required_ui": "title.be must be non-empty",
+      "required_api": true,
+      "notes": "Primary headline of the anon."
+    },
+    {
+      "id": "location",
+      "ui_label": "Location (BE|EN|PL)",
+      "api_key": "location",
+      "type": "LocalizedText",
+      "control": "text",
+      "default": { "be": "", "en": "", "pl": "" },
+      "required_ui": false,
+      "required_api": "shape required (may be empty strings)",
+      "notes": "Human-readable place name."
+    },
+    {
+      "id": "budget",
+      "ui_label": "Budget (ex: 300-500)",
+      "api_key": "budget",
+      "type": "string",
+      "control": "text",
+      "default": "",
+      "required_ui": false,
+      "required_api": false,
+      "example": "300-500"
+    },
+    {
+      "id": "currency",
+      "ui_label": "Currency (ex: EUR)",
+      "api_key": "currency",
+      "type": "string",
+      "control": "text",
+      "default": "",
+      "required_ui": false,
+      "required_api": false,
+      "example": "EUR"
+    },
+    {
+      "id": "startDate",
+      "ui_label": "Start date",
+      "api_key": "startDate",
+      "type": "date",
+      "control": "date",
+      "ui_format": "dd-mm-yyyy",
+      "api_format": "yyyy-mm-dd (ISO date string); omit if empty",
+      "default": "",
+      "required_ui": "at least one of startDate or datedAt",
+      "required_api": false
+    },
+    {
+      "id": "datedAt",
+      "ui_label": "Dated at (sorting date)",
+      "api_key": "datedAt",
+      "type": "date",
+      "control": "date",
+      "ui_format": "dd-mm-yyyy",
+      "api_format": "yyyy-mm-dd (ISO date string); omit if empty",
+      "default": "",
+      "required_ui": "at least one of startDate or datedAt",
+      "required_api": false,
+      "notes": "Public list sorts by datedAt ?? startDate. Pinned items still show first."
+    },
+    {
+      "id": "endDate",
+      "ui_label": "End date",
+      "api_key": "endDate",
+      "type": "date",
+      "control": "date",
+      "ui_format": "dd-mm-yyyy",
+      "api_format": "yyyy-mm-dd (ISO date string); omit if empty",
+      "default": "",
+      "required_ui": false,
+      "required_api": false
+    },
+    {
+      "id": "approxDate",
+      "ui_label": "Approx date (if exact dates unknown)",
+      "api_key": "approxDate",
+      "type": "LocalizedText",
+      "control": "text",
+      "default": { "be": "", "en": "", "pl": "" },
+      "required_ui": false,
+      "required_api": "shape required (may be empty strings)",
+      "example": { "be": "Заўтра", "en": "Tomorrow", "pl": "Jutro" }
+    },
+    {
+      "id": "countries",
+      "ui_label": "Countries",
+      "api_key": "countries",
+      "type": "string[]",
+      "control": "multi-select",
+      "default": [],
+      "required_ui": false,
+      "required_api": false,
+      "value_space": "lowercase ISO-ish codes from content_agent/countries.json (and frontend/src/constants/countries.ts)",
+      "notes": "Do not confuse locale 'be' (Belarusian) with country code 'be' (Belgium). Belarus country code is 'by'."
+    },
+    {
+      "id": "ageRestriction",
+      "ui_label": "Age restriction",
+      "api_key": "ageRestriction",
+      "type": "LocalizedText",
+      "control": "text",
+      "default": { "be": "", "en": "", "pl": "" },
+      "required_ui": false,
+      "required_api": "shape required (may be empty strings)",
+      "example": { "be": "18+", "en": "18+", "pl": "18+" }
+    },
+    {
+      "id": "pinned",
+      "ui_label": "Pin (pinned show first; ordered by last update)",
+      "api_key": "pinned",
+      "type": "boolean",
+      "control": "switch",
+      "default": false,
+      "required_ui": false,
+      "required_api": false
+    },
+    {
+      "id": "chatLink",
+      "ui_label": "Planning chat link",
+      "api_key": "chatLink",
+      "type": "string",
+      "control": "text",
+      "default": "",
+      "required_ui": false,
+      "required_api": false,
+      "notes": "URL to planning chat (Telegram/etc)."
+    },
+    {
+      "id": "difficultyLevel",
+      "ui_label": "Difficulty level (1-5)",
+      "api_key": "difficultyLevel",
+      "type": "integer",
+      "control": "number",
+      "min": 1,
+      "max": 5,
+      "default": 3,
+      "required_ui": false,
+      "required_api": false
+    },
+    {
+      "id": "description",
+      "ui_label": "Description (BE|EN|PL)",
+      "api_key": "description",
+      "type": "LocalizedText",
+      "control": "richtext",
+      "editor": "ReactQuill (create form); multiline TextField (edit form)",
+      "richtext_toolbar": ["Normal", "bold", "italic", "underline", "link", "bulletList", "numberedList", "clearFormatting"],
+      "default": { "be": "", "en": "", "pl": "" },
+      "required_ui": false,
+      "required_api": "shape required (may be empty strings)",
+      "notes": "HTML allowed from Quill on create."
+    },
+    {
+      "id": "images",
+      "ui_label": "Select Images",
+      "api_key": "images",
+      "type": "string[]",
+      "control": "file-upload-button",
+      "default": [],
+      "required_ui": false,
+      "required_api": false,
+      "notes": "Upload via /api/upload/event-image first; store returned public URLs in images[]."
+    }
+  ],
+  "validation": {
+    "frontend": [
+      "title.be.trim() is required",
+      "date fields must be empty or valid dd-mm-yyyy",
+      "at least one of startDate or datedAt must be a valid date"
+    ],
+    "backend": [
+      "title, description, location, approxDate, ageRestriction must each be { en, be, pl } with string values",
+      "difficultyLevel constrained by Mongoose to 1..5 when set",
+      "no backend check that title.be is non-empty or that dates exist"
+    ]
+  },
+  "create_payload_template": {
+    "title": { "be": "", "en": "", "pl": "" },
+    "description": { "be": "", "en": "", "pl": "" },
+    "location": { "be": "", "en": "", "pl": "" },
+    "approxDate": { "be": "", "en": "", "pl": "" },
+    "ageRestriction": { "be": "", "en": "", "pl": "" },
+    "budget": "",
+    "currency": "",
+    "startDate": null,
+    "endDate": null,
+    "datedAt": null,
+    "countries": [],
+    "chatLink": "",
+    "difficultyLevel": 3,
+    "pinned": false,
+    "images": []
+  },
+  "agent_workflow_hint": [
+    "1. Draft source content in Belarusian (be) for title, description, location, approxDate, ageRestriction.",
+    "2. Fill scalar fields: budget, currency, dates (ISO yyyy-mm-dd), countries[], chatLink, difficultyLevel, pinned.",
+    "3. Optionally call POST /api/admin/translate-localized to fill en/pl.",
+    "4. Upload images via POST /api/upload/event-image; put URLs into images[].",
+    "5. POST /api/events with full LocalizedText objects (never bare strings for localized fields).",
+    "6. Omit empty date fields rather than sending empty strings."
+  ],
+  "code_references": {
+    "model": "backend/src/models/Event.ts",
+    "localized_type": "backend/src/models/localized.ts",
+    "localization_contract": "backend/src/utils/localizationContract.ts",
+    "frontend_types": "frontend/src/types/localization.ts",
+    "countries": "frontend/src/constants/countries.ts",
+    "date_helpers": "frontend/src/utils/dateDisplay.ts"
+  }
+}

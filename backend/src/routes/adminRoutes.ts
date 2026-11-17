@@ -15,6 +15,7 @@ import { loginLimiter } from "../utils/rateLimit.js";
 import { clearAuthCookie, cookieSameSite, isCookieSecure, setAuthCookie } from "../utils/auth.js";
 import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
 import { coerceTranslatedField } from "../utils/coerceTranslatedField.js";
+import { parseEventPaste } from "../utils/parseEventPaste.js";
 
 const router = Router();
 
@@ -241,6 +242,36 @@ router.post(
     res.json({
       en: Object.fromEntries(fields.map((f) => [f, coerceTranslatedField(en[f])])) as Record<string, string>,
       pl: Object.fromEntries(fields.map((f) => [f, coerceTranslatedField(pl[f])])) as Record<string, string>
+    });
+  })
+);
+
+router.post(
+  "/events/from-paste",
+  checkAdminToken,
+  asyncHandler(async (req: Request, res: Response) => {
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    const parsed = parseEventPaste(text);
+    if (parsed.errors.length > 0) {
+      throw new HttpError(400, parsed.errors.map((e) => `Event ${e.eventIndex}: ${e.message}`).join("; "));
+    }
+    if (parsed.events.length === 0) {
+      throw new HttpError(400, "No events to create");
+    }
+
+    const now = new Date();
+    const created = await Event.insertMany(
+      parsed.events.map((event) => ({
+        ...event,
+        images: [],
+        createdAt: now,
+        updatedAt: now
+      }))
+    );
+
+    res.status(201).json({
+      created: created.length,
+      ids: created.map((doc) => String(doc._id))
     });
   })
 );

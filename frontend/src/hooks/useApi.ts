@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setCsrfToken } from "../store/authSlice";
 import type { RootState } from "../store/store";
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -7,10 +8,21 @@ const API_URL = process.env.REACT_APP_API_URL;
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "HEAD";
 type HeadersMap = Record<string, string>;
 
+async function refreshCsrfToken(): Promise<string | null> {
+  const csrfResponse = await fetch(`${API_URL}/admin/csrf`, {
+    method: "GET",
+    credentials: "include"
+  });
+  if (!csrfResponse.ok) return null;
+  const csrfData = (await csrfResponse.json()) as { csrfToken?: string };
+  return typeof csrfData.csrfToken === "string" ? csrfData.csrfToken : null;
+}
+
 export default function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const csrfToken = useSelector((state: RootState) => state.auth.csrfToken);
+  const dispatch = useDispatch();
 
   const request = useCallback(async (
     endpoint: string,
@@ -23,19 +35,20 @@ export default function useApi() {
 
     try {
       const isFormData = body instanceof FormData;
-      const options: RequestInit = {
+      const isMutation = method !== "GET" && method !== "HEAD";
+
+      const buildOptions = (token: string | null): RequestInit => ({
         method,
         credentials: "include",
         headers: {
           ...headers,
-          ...(method !== "GET" && method !== "HEAD" && csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+          ...(isMutation && token ? { "X-CSRF-Token": token } : {}),
           ...(isFormData ? {} : { "Content-Type": "application/json" })
-        }
-      };
-
-      if (body && !["GET", "HEAD", "DELETE"].includes(method)) {
-        options.body = isFormData ? (body as FormData) : JSON.stringify(body);
-      }
+        },
+        ...(body && !["GET", "HEAD", "DELETE"].includes(method)
+          ? { body: isFormData ? (body as FormData) : JSON.stringify(body) }
+          : {})
+      });
 
       const url = new URL(`${API_URL}${endpoint}`);
       const browserParams = new URLSearchParams(window.location.search);
@@ -44,9 +57,28 @@ export default function useApi() {
         url.searchParams.set("lang", lang);
       }
 
-      const response = await fetch(url.toString(), options);
+      let response = await fetch(url.toString(), buildOptions(csrfToken));
+
+      // Stale CSRF after redeploy / long session: refresh once and retry.
+      if (response.status === 403 && isMutation && endpoint !== "/admin/login") {
+        const freshToken = await refreshCsrfToken();
+        if (freshToken) {
+          dispatch(setCsrfToken(freshToken));
+          response = await fetch(url.toString(), buildOptions(freshToken));
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        let detail = `Error ${response.status}: ${response.statusText}`;
+        try {
+          const payload = (await response.json()) as { error?: unknown };
+          if (typeof payload.error === "string" && payload.error.trim()) {
+            detail = payload.error;
+          }
+        } catch {
+          // keep status text when body is not JSON
+        }
+        throw new Error(detail);
       }
 
       return (await response.json()) as unknown;
@@ -57,7 +89,7 @@ export default function useApi() {
     } finally {
       setLoading(false);
     }
-  }, [csrfToken]);
+  }, [csrfToken, dispatch]);
 
   const get = useCallback(<T,>(endpoint: string, headers: HeadersMap = {}) =>
     request(endpoint, "GET", null, headers) as Promise<T | null>, [request]);

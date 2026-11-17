@@ -39,6 +39,9 @@ export default function AdminNavbar() {
         <Button variant="contained" color="secondary" component={Link} to={addLangToPath("/admin/events/create", i18n.language)}>
           Add Event
         </Button>
+        <Button variant="contained" color="secondary" component={Link} to={addLangToPath("/admin/events/import", i18n.language)}>
+          Import Event
+        </Button>
         <Button variant="contained" color="secondary" component={Link} to={addLangToPath("/admin/equipment/create", i18n.language)}>
           Add Equipment
         </Button>
