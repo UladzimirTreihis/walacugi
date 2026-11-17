@@ -78,6 +78,27 @@ router.get(
 );
 
 router.get(
+  "/calendar",
+  asyncHandler(async (req: Request, res: Response) => {
+    const lang = getRequestedLang(req);
+    const events = await Event.aggregate([
+      {
+        $addFields: {
+          sortEffectiveDate: { $ifNull: ["$datedAt", "$startDate"] }
+        }
+      },
+      {
+        $sort: {
+          sortEffectiveDate: 1,
+          createdAt: -1
+        }
+      }
+    ]);
+    res.json(events.map((event: Record<string, unknown>) => toLocalizedEvent(event, lang)).filter(Boolean));
+  })
+);
+
+router.get(
   "/:id",
   asyncHandler(async (req: Request, res: Response) => {
     const lang = getRequestedLang(req);

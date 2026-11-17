@@ -215,6 +215,7 @@ function Navbar() {
     { to: "/", label: t("about"), scrollToId: "about" },
     { to: "/poznaj-swiat", label: t("foundation") },
     { to: "/events", label: t("events") },
+    { to: "/calendar", label: t("calendar.nav") },
     { to: "/equipment", label: t("equipment.title") }
   ];
 

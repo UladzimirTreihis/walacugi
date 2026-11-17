@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Box, Typography, Container, Chip, Stack, Divider, Button } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
@@ -6,22 +6,66 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchEvents } from "../../store/eventsSlice";
 import DOMPurify from "dompurify";
 import type { AppDispatch, RootState } from "../../store/store";
+import type { EventItem } from "../../types";
 import { COUNTRY_BY_CODE, getFlagEmoji } from "../../constants/countries";
 import formatDateEU from "../../utils/formatDateEU";
+import { normalizeLang } from "../../utils/langUrl";
 import { useTranslation } from "react-i18next";
+
+const API_URL = process.env.REACT_APP_API_URL;
 
 export default function EventFull() {
   const { t, i18n } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const eventsList = useSelector((state: RootState) => state.events.items);
-  const loading = useSelector((state: RootState) => state.events.loading);
-  const error = useSelector((state: RootState) => state.events.error);
-  const event = eventsList.find((item) => item._id === eventId);
+  const listLoading = useSelector((state: RootState) => state.events.loading);
+  const listError = useSelector((state: RootState) => state.events.error);
+  const fromList = eventsList.find((item) => item._id === eventId);
+  const [fetchedEvent, setFetchedEvent] = useState<EventItem | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     void dispatch(fetchEvents(i18n.language));
   }, [dispatch, i18n.language]);
+
+  useEffect(() => {
+    if (!eventId || fromList) {
+      setFetchedEvent(null);
+      setFetchError(null);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      setFetchLoading(true);
+      setFetchError(null);
+      try {
+        const lang = normalizeLang(i18n.language) ?? "be";
+        const response = await fetch(`${API_URL}/events/${eventId}?lang=${lang}`);
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? "Event not found" : "Failed to load event");
+        }
+        const data = (await response.json()) as EventItem;
+        if (!cancelled) setFetchedEvent(data);
+      } catch (err) {
+        if (!cancelled) {
+          setFetchedEvent(null);
+          setFetchError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        if (!cancelled) setFetchLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, fromList, i18n.language]);
+
+  const event = fromList ?? fetchedEvent;
+  const loading = listLoading || fetchLoading;
+  const error = fetchError || (!fromList && !fetchedEvent ? listError : null);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
