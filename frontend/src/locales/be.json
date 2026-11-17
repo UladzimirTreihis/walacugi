@@ -60,7 +60,18 @@
     "choose_unit": "Выберыце адзінку",
     "unavailable": "недаступна",
     "select_unit_first": "Спачатку выберыце адзінку, каб выбраць даты",
-    "range_conflict": "Выбраны перыяд утрымлівае недаступныя даты для гэтай адзінкі."
+    "range_conflict": "Выбраны перыяд утрымлівае недаступныя даты для гэтай адзінкі.",
+    "currency": "Валюта",
+    "priceTiersTitle": "Цэны за дзень па працягласці арэнды",
+    "priceFrom": "ад {{price}} {{currency}}/дзень",
+    "liveTotal": "{{days}} дзён × {{pricePerDay}} {{currency}}/дзень = {{totalPrice}} {{currency}}",
+    "priceBracket": {
+      "d1_2": "1–2 дні",
+      "d3_4": "3–4 дні",
+      "d5_7": "5–7 дзён",
+      "d8_14": "8–14 дзён",
+      "d15_plus": "15+ дзён"
+    }
   },
   "cart": {
     "title": "Кошык",
@@ -79,7 +90,7 @@
     "confirm_admin": "Пацвердзіць браніраванне (адмін)",
     "empty": "Ваш кошык пусты.",
     "remove_from_cart": "Выдаліць з кошыка",
-    "price_with_total": "{{pricePerDay}} {{currency}}/дзень, Усяго: {{totalPrice}} {{currency}}",
+    "price_with_total": "{{pricePerDay}} {{currency}}/дзень × {{days}} дзён, Усяго: {{totalPrice}} {{currency}}",
     "link_not_found": "Не ўдалося знайсці карэктныя даныя кошыка ў пададзенай спасылцы.",
     "link_invalid": "Гэта спасылка на кошык некарэктная або пустая.",
     "link_loaded": "Захаваны кошык паспяхова загружаны.",

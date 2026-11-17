@@ -14,6 +14,14 @@ import { addLangToPath } from "../../utils/langUrl";
 import type { RootState } from "../../store/store";
 import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
 import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
+import AdminPriceTiersFields from "./AdminPriceTiersFields";
+import {
+  emptyPriceTiers,
+  isPriceTiers,
+  tiersFromLegacyPricePerDay,
+  type PriceTiers
+} from "../../utils/equipmentPricing";
+import type { EquipmentPriceTiers } from "../../types";
 
 interface EquipmentLocalizedResponse {
   model: {
@@ -21,7 +29,8 @@ interface EquipmentLocalizedResponse {
     categories: Array<{ _id: string; name: LocalizedText }>;
     title: LocalizedText;
     description: LocalizedText;
-    pricePerDay: number;
+    priceTiers?: EquipmentPriceTiers;
+    pricePerDay?: number;
     currency?: string;
     size?: LocalizedText;
     images: string[];
@@ -49,14 +58,12 @@ export default function AdminEditEquipmentForm() {
   const [activeLocale, setActiveLocale] = useState<Locale>("be");
   const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
-  const [pricePerDay, setPricePerDay] = useState<string>("");
-  const [currency, setCurrency] = useState("EUR");
+  const [priceTiers, setPriceTiers] = useState<PriceTiers>(() => emptyPriceTiers(0));
+  const [currency, setCurrency] = useState("PLN");
   const [size, setSize] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [images, setImages] = useState<EditableImage[]>([]);
   const [feedback, setFeedback] = useState<UiFeedback | null>(null);
-  const normalizedPricePerDay = Number.parseFloat(pricePerDay.replace(",", "."));
-  const hasPriceInput = pricePerDay.trim().length > 0;
-  const isValidPricePerDay = Number.isFinite(normalizedPricePerDay) && normalizedPricePerDay > 0;
+  const isValidPriceTiers = Object.values(priceTiers).every((n) => Number.isFinite(n) && n >= 0);
 
   const refreshCategories = () => {
     get<CategoryItem[]>("/equipment/categories").then((data) => {
@@ -67,13 +74,18 @@ export default function AdminEditEquipmentForm() {
   const refresh = () => {
     get<EquipmentLocalizedResponse>(`/admin/equipment/${modelId}/localized`).then((data) => {
       if (!data) return;
+      const resolvedTiers: PriceTiers = isPriceTiers(data.model.priceTiers)
+        ? data.model.priceTiers
+        : tiersFromLegacyPricePerDay(Number(data.model.pricePerDay ?? 0));
       const modelForList: EquipmentModelItem = {
         _id: data.model._id,
         categories: data.model.categories.map((c) => ({ _id: c._id, name: c.name[i18n.language as Locale] ?? c.name.be ?? "" })),
         categoryDisplay: data.model.categories.map((c) => c.name[i18n.language as Locale] ?? c.name.be ?? "").join(", "),
         title: data.model.title[i18n.language as Locale] ?? data.model.title.be ?? "",
         description: data.model.description[i18n.language as Locale] ?? data.model.description.be ?? "",
-        pricePerDay: data.model.pricePerDay,
+        priceTiers: resolvedTiers,
+        priceFrom: Math.min(...Object.values(resolvedTiers)),
+        pricePerDay: resolvedTiers.d1_2,
         currency: data.model.currency,
         size: (data.model.size?.[i18n.language as Locale] ?? data.model.size?.be ?? ""),
         images: data.model.images,
@@ -87,7 +99,7 @@ export default function AdminEditEquipmentForm() {
       setCategoryIds(ids.length > 0 ? ids : [""]);
       setTitle(data.model.title ?? { ...EMPTY_LOCALIZED });
       setDescription(data.model.description ?? { ...EMPTY_LOCALIZED });
-      setPricePerDay(String(data.model.pricePerDay ?? ""));
+      setPriceTiers(resolvedTiers);
       setCurrency(data.model.currency ?? "PLN");
       setSize(data.model.size ?? { ...EMPTY_LOCALIZED });
       setImages(
@@ -123,10 +135,10 @@ export default function AdminEditEquipmentForm() {
   const handleSave = async () => {
     if (!model) return;
     setFeedback(null);
-    if (!isValidPricePerDay) {
+    if (!isValidPriceTiers) {
       setFeedback({
         severity: "error",
-        message: "Price per day must be a valid number greater than 0."
+        message: "All price tiers must be valid numbers greater than or equal to 0."
       });
       return;
     }
@@ -158,7 +170,7 @@ export default function AdminEditEquipmentForm() {
         categories: selected,
         title,
         description,
-        pricePerDay: normalizedPricePerDay,
+        priceTiers,
         currency,
         size,
         images: images
@@ -280,16 +292,13 @@ export default function AdminEditEquipmentForm() {
           value={description[activeLocale]}
           onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
         />
-        <TextField
-          type="text"
-          label="Price per day"
-          value={pricePerDay}
-          onChange={(e) => setPricePerDay(e.target.value)}
-          error={hasPriceInput && !isValidPricePerDay}
-          helperText={hasPriceInput && !isValidPricePerDay ? "Enter a valid number greater than 0 (e.g. 12.5)" : ""}
-          inputProps={{ inputMode: "decimal" }}
+        <AdminPriceTiersFields
+          value={priceTiers}
+          onChange={setPriceTiers}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          disabled={loading}
         />
-        <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
         <TextField
           label={`Size (optional) (${activeLocale.toUpperCase()})`}
           value={size[activeLocale]}

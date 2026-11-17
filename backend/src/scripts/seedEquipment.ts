@@ -22,6 +22,7 @@ async function run() {
     categories: [kayakCat._id],
     title: "Tour Kayak",
     description: "Stable touring kayak for river trips.",
+    priceTiers: { d1_2: 25, d3_4: 20, d5_7: 18, d8_14: 15, d15_plus: 12 },
     pricePerDay: 25,
     currency: "PLN",
     size: "M",

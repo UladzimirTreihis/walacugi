@@ -60,7 +60,18 @@
     "choose_unit": "Choose unit",
     "unavailable": "unavailable",
     "select_unit_first": "Select a unit first to pick dates",
-    "range_conflict": "Selected date range includes unavailable dates for this unit."
+    "range_conflict": "Selected date range includes unavailable dates for this unit.",
+    "currency": "Currency",
+    "priceTiersTitle": "Daily rates by rental length",
+    "priceFrom": "from {{price}} {{currency}}/day",
+    "liveTotal": "{{days}} days × {{pricePerDay}} {{currency}}/day = {{totalPrice}} {{currency}}",
+    "priceBracket": {
+      "d1_2": "1–2 days",
+      "d3_4": "3–4 days",
+      "d5_7": "5–7 days",
+      "d8_14": "8–14 days",
+      "d15_plus": "15+ days"
+    }
   },
   "cart": {
     "title": "Cart",
@@ -79,7 +90,7 @@
     "confirm_admin": "Confirm booking (admin)",
     "empty": "Your cart is empty.",
     "remove_from_cart": "Remove from cart",
-    "price_with_total": "{{pricePerDay}} {{currency}}/day, Total: {{totalPrice}} {{currency}}",
+    "price_with_total": "{{pricePerDay}} {{currency}}/day × {{days}} days, Total: {{totalPrice}} {{currency}}",
     "link_not_found": "Could not find a valid cart payload in the provided link.",
     "link_invalid": "This cart link is invalid or empty.",
     "link_loaded": "Saved cart loaded successfully.",

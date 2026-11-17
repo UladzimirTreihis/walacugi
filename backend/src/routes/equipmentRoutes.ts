@@ -12,6 +12,13 @@ import { isValidDateRange, rangesOverlap } from "../utils/bookingValidation.js";
 import { logger } from "../utils/logger.js";
 import { HttpError } from "../utils/httpErrors.js";
 import { getLocalizedText, getRequestedLang, isLocalizedText, type LocalizedText } from "../utils/localizedFields.js";
+import {
+  getMinDailyRate,
+  isPriceTiers,
+  parsePriceTiers,
+  tiersFromLegacyPricePerDay,
+  type PriceTiers
+} from "../utils/equipmentPricing.js";
 
 const router = Router();
 
@@ -34,13 +41,19 @@ function getLocalizedTextWithFallback(value: LocalizedText, lang: ReturnType<typ
   return "";
 }
 
+function resolveDocPriceTiers(doc: { priceTiers?: unknown; pricePerDay?: number }): PriceTiers {
+  if (isPriceTiers(doc.priceTiers)) return doc.priceTiers;
+  return tiersFromLegacyPricePerDay(typeof doc.pricePerDay === "number" ? doc.pricePerDay : 0);
+}
+
 function toEquipmentModelDto(doc: {
   _id: mongoose.Types.ObjectId;
   category?: string;
   categories?: PopulatedCategory[] | mongoose.Types.ObjectId[];
   title: unknown;
   description: unknown;
-  pricePerDay: number;
+  pricePerDay?: number;
+  priceTiers?: unknown;
   currency?: string;
   size?: unknown;
   images: string[];
@@ -66,13 +79,17 @@ function toEquipmentModelDto(doc: {
   if (!isLocalizedText(doc.title) || !isLocalizedText(doc.description) || !isLocalizedText(doc.size)) {
     return null;
   }
+  const priceTiers = resolveDocPriceTiers(doc);
   return {
     _id: String(doc._id),
     categories: cats,
     categoryDisplay,
     title: getLocalizedText(doc.title, lang),
     description: getLocalizedText(doc.description, lang),
-    pricePerDay: doc.pricePerDay,
+    priceTiers,
+    priceFrom: getMinDailyRate(priceTiers),
+    /** @deprecated Prefer priceTiers / priceFrom */
+    pricePerDay: priceTiers.d1_2,
     currency: doc.currency,
     size: getLocalizedText(doc.size, lang),
     images: doc.images ?? [],
@@ -326,11 +343,20 @@ router.post("/", checkAdminToken, async (req: Request, res: Response, next: Next
     if (!isLocalizedText(req.body.title) || !isLocalizedText(req.body.description) || !isLocalizedText(req.body.size)) {
       throw new HttpError(400, "title, description, and size must be localized objects { en, be, pl }");
     }
+    const priceTiers =
+      parsePriceTiers(req.body.priceTiers) ??
+      (Number.isFinite(Number(req.body.pricePerDay))
+        ? tiersFromLegacyPricePerDay(Number(req.body.pricePerDay))
+        : null);
+    if (!priceTiers) {
+      throw new HttpError(400, "priceTiers must include d1_2, d3_4, d5_7, d8_14, d15_plus as numbers >= 0");
+    }
     const payload = {
       categories: categoryIds,
       title: req.body.title,
       description: req.body.description,
-      pricePerDay: Number(req.body.pricePerDay),
+      priceTiers,
+      pricePerDay: priceTiers.d1_2,
       currency: req.body.currency ?? "PLN",
       size: req.body.size,
       images: Array.isArray(req.body.images) ? req.body.images : [],
@@ -379,13 +405,22 @@ router.put("/:modelId", checkAdminToken, async (req: Request, res: Response, nex
     if (found !== categoryIds.length) {
       throw new HttpError(400, "One or more categories do not exist");
     }
+    const priceTiers =
+      parsePriceTiers(req.body.priceTiers) ??
+      (Number.isFinite(Number(req.body.pricePerDay))
+        ? tiersFromLegacyPricePerDay(Number(req.body.pricePerDay))
+        : null);
+    if (!priceTiers) {
+      throw new HttpError(400, "priceTiers must include d1_2, d3_4, d5_7, d8_14, d15_plus as numbers >= 0");
+    }
     const updated = await EquipmentModel.findByIdAndUpdate(
       modelId,
       {
         categories: categoryIds,
         title: req.body.title,
         description: req.body.description,
-        pricePerDay: Number(req.body.pricePerDay),
+        priceTiers,
+        pricePerDay: priceTiers.d1_2,
         currency: req.body.currency ?? "PLN",
         size: req.body.size,
         images: Array.isArray(req.body.images) ? req.body.images : [],
