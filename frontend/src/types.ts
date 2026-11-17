@@ -48,13 +48,24 @@ export interface CategoryLocalizedItem {
   updatedAt?: string;
 }
 
+export interface EquipmentPriceTiers {
+  d1_2: number;
+  d3_4: number;
+  d5_7: number;
+  d8_14: number;
+  d15_plus: number;
+}
+
 export interface EquipmentModelItem {
   _id: string;
   categories: CategoryItem[];
   categoryDisplay: string;
   title: string;
   description: string;
-  pricePerDay: number;
+  priceTiers: EquipmentPriceTiers;
+  priceFrom?: number;
+  /** @deprecated Prefer priceTiers / priceFrom */
+  pricePerDay?: number;
   currency?: string;
   size?: string;
   images: string[];
@@ -86,6 +97,8 @@ export interface CheckoutItem {
   modelId: string;
   modelTitle: string;
   modelImage?: string;
+  priceTiers?: EquipmentPriceTiers;
+  /** @deprecated Prefer priceTiers */
   pricePerDay?: number;
   currency?: string;
   startDate: string;

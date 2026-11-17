@@ -13,9 +13,11 @@ import { addLangToPath } from "../../utils/langUrl";
 import type { RootState } from "../../store/store";
 import LocaleButtonGroup from "../shared/admin/LocaleButtonGroup";
 import { EMPTY_LOCALIZED, type Locale, type LocalizedText } from "../../types/localization";
+import AdminPriceTiersFields from "./AdminPriceTiersFields";
+import { emptyPriceTiers, getMinDailyRate, type PriceTiers } from "../../utils/equipmentPricing";
 
 export default function AdminEquipmentForm() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { post, get, loading, error } = useApi();
   const isAdmin = useSelector((state: RootState) => state.auth.isAdmin);
   const [items, setItems] = useState<EquipmentModelItem[]>([]);
@@ -24,8 +26,8 @@ export default function AdminEquipmentForm() {
   const [activeLocale, setActiveLocale] = useState<Locale>("be");
   const [title, setTitle] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [description, setDescription] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
-  const [pricePerDay, setPricePerDay] = useState<number>(0);
-  const [currency, setCurrency] = useState("EUR");
+  const [priceTiers, setPriceTiers] = useState<PriceTiers>(() => emptyPriceTiers(0));
+  const [currency, setCurrency] = useState("PLN");
   const [size, setSize] = useState<LocalizedText>({ ...EMPTY_LOCALIZED });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -90,7 +92,7 @@ export default function AdminEquipmentForm() {
         categories: selectedCategoryIds,
         title,
         description,
-        pricePerDay: Number(pricePerDay),
+        priceTiers,
         currency,
         size,
         images: filePaths
@@ -106,8 +108,8 @@ export default function AdminEquipmentForm() {
       setCategoryIds([""]);
       setTitle({ ...EMPTY_LOCALIZED });
       setDescription({ ...EMPTY_LOCALIZED });
-      setPricePerDay(0);
-      setCurrency("EUR");
+      setPriceTiers(emptyPriceTiers(0));
+      setCurrency("PLN");
       setSize({ ...EMPTY_LOCALIZED });
       setSelectedFiles([]);
       setImagePreviews([]);
@@ -185,8 +187,13 @@ export default function AdminEquipmentForm() {
           value={description[activeLocale]}
           onChange={(e) => setLocalizedValue(setDescription, e.target.value)}
         />
-        <TextField type="number" label="Price per day" value={pricePerDay} onChange={(e) => setPricePerDay(Number(e.target.value || 0))} />
-        <TextField label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} />
+        <AdminPriceTiersFields
+          value={priceTiers}
+          onChange={setPriceTiers}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          disabled={loading}
+        />
         <TextField
           label={`Size (optional) (${activeLocale.toUpperCase()})`}
           value={size[activeLocale]}
@@ -220,7 +227,11 @@ export default function AdminEquipmentForm() {
           <Box key={item._id} sx={{ p: 1.5, border: "1px solid #ddd", borderRadius: 1 }}>
             <Typography variant="subtitle1">{item.title}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {item.categoryDisplay} • {item.pricePerDay} {item.currency}/day
+              {item.categoryDisplay} •{" "}
+              {t("equipment.priceFrom", {
+                price: item.priceFrom ?? (item.priceTiers ? getMinDailyRate(item.priceTiers) : item.pricePerDay ?? 0),
+                currency: item.currency ?? "PLN"
+              })}
             </Typography>
             <Button size="small" component={Link} to={addLangToPath(`/admin/equipment/edit/${item._id}`, i18n.language)} sx={{ mt: 0.5 }}>
               Edit

@@ -12,6 +12,15 @@ import type { EquipmentAvailabilityItem, EquipmentModelItem, EquipmentUnitItem }
 import { addToCheckout } from "../../store/checkoutSlice";
 import type { AppDispatch, RootState } from "../../store/store";
 import type { UiFeedback } from "../../utils/feedback";
+import {
+  EQUIPMENT_PRICE_BRACKETS,
+  countRentalDays,
+  getDailyRate,
+  getLineTotal,
+  getMinDailyRate,
+  resolvePriceBracket,
+  resolvePriceTiers
+} from "../../utils/equipmentPricing";
 
 interface DetailsResponse {
   model: EquipmentModelItem;
@@ -117,6 +126,7 @@ export default function EquipmentDetail() {
       setFeedback({ severity: "info", message: t("cart.already_in_cart") });
       return;
     }
+    const tiers = resolvePriceTiers(model.priceTiers, model.pricePerDay);
     dispatch(
       addToCheckout({
         unitId: selectedUnit._id,
@@ -124,7 +134,8 @@ export default function EquipmentDetail() {
         modelId: model._id,
         modelTitle: model.title,
         modelImage: model.images?.[0],
-        pricePerDay: model.pricePerDay,
+        priceTiers: tiers ?? undefined,
+        pricePerDay: tiers?.d1_2 ?? model.pricePerDay,
         currency: model.currency,
         startDate: startDateIso,
         endDate: endDateIso
@@ -149,11 +160,79 @@ export default function EquipmentDetail() {
 
   if (!model) return <Container sx={{ py: 8 }}><Typography>{t("common.loading")}</Typography></Container>;
 
+  const tiers = resolvePriceTiers(model.priceTiers, model.pricePerDay);
+  const currency = model.currency ?? "PLN";
+  const selectedDays =
+    startDateIso && endDateIso ? countRentalDays(startDateIso, endDateIso) : null;
+  const activeBracket = selectedDays != null ? resolvePriceBracket(selectedDays) : null;
+  const liveDaily = tiers && selectedDays != null ? getDailyRate(tiers, selectedDays) : null;
+  const liveTotal = tiers && selectedDays != null ? getLineTotal(tiers, selectedDays) : null;
+  const fromPrice = model.priceFrom ?? (tiers ? getMinDailyRate(tiers) : 0);
+
   return (
     <Container sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 1 }}>{model.title}</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>{model.description}</Typography>
-      <Typography variant="h6" sx={{ mb: 2 }}>{model.pricePerDay} {model.currency}{t("common.per_day_suffix")}</Typography>
+      <Typography variant="h6" sx={{ mb: 1 }}>
+        {t("equipment.priceFrom", { price: fromPrice, currency })}
+      </Typography>
+
+      {tiers && (
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            maxWidth: 420
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>
+            {t("equipment.priceTiersTitle")}
+          </Typography>
+          <Stack spacing={1}>
+            {EQUIPMENT_PRICE_BRACKETS.map((bracket) => {
+              const isActive = activeBracket === bracket.key;
+              return (
+                <Box
+                  key={bracket.key}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    px: 1,
+                    py: 0.75,
+                    borderRadius: 1,
+                    bgcolor: isActive ? "secondary.main" : "transparent",
+                    color: isActive ? "secondary.contrastText" : "text.primary",
+                    fontWeight: isActive ? 700 : 400
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: "inherit" }}>
+                    {t(bracket.labelKey)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "inherit" }}>
+                    {tiers[bracket.key]} {currency}
+                    {t("common.per_day_suffix")}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Stack>
+          {liveDaily != null && liveTotal != null && selectedDays != null && (
+            <Typography variant="body2" sx={{ mt: 2, fontWeight: 700 }}>
+              {t("equipment.liveTotal", {
+                days: selectedDays,
+                pricePerDay: liveDaily,
+                currency,
+                totalPrice: liveTotal
+              })}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       <Typography variant="subtitle1" sx={{ mb: 1 }}>{t("equipment.choose_unit")}</Typography>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
