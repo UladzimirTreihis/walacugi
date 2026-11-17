@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { EventItem } from "../../types";
@@ -6,7 +6,6 @@ import { normalizeLang } from "../../utils/langUrl";
 import { eventCoversDay, getEventCalendarRange } from "../../utils/eventCalendarRange";
 import MonthCalendar from "./MonthCalendar";
 import CalendarEventDetail from "./CalendarEventDetail";
-import CalendarEventList from "./CalendarEventList";
 import type { DayMark } from "./CalendarDayCell";
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -30,7 +29,6 @@ export default function EventsCalendarPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const calendarTopRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,27 +94,12 @@ export default function EventsCalendarPage() {
     setSelectedDay((prev) => (prev && dayInViewMonth(prev, next.year, next.month) ? prev : null));
   }, [year, month]);
 
-  const handleSelectEvent = useCallback((event: EventItem) => {
-    const range = getEventCalendarRange(event);
-    const jumpDay = range?.anchor ?? null;
-    if (jumpDay) {
-      const [y, m] = jumpDay.split("-").map(Number);
-      setYear(y);
-      setMonth(m - 1);
-      setSelectedDay(jumpDay);
-    } else {
-      setSelectedDay(null);
-    }
-    calendarTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
-
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", px: { xs: 1.5, sm: 2 }, py: { xs: 3, sm: 5 } }}>
-      <Box ref={calendarTopRef} sx={{ mb: 2.5 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+      <Box sx={{ mb: 2.5 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           {t("calendar.title")}
         </Typography>
-        <Typography color="text.secondary">{t("calendar.subtitle")}</Typography>
       </Box>
 
       {loading && (
@@ -131,29 +114,25 @@ export default function EventsCalendarPage() {
       )}
 
       {!loading && !error && (
-        <>
-          <Box
-            sx={{
-              p: { xs: 1.5, sm: 2.5 },
-              borderRadius: 3,
-              bgcolor: "background.paper",
-              boxShadow: "0 2px 12px rgba(31, 41, 51, 0.06)"
-            }}
-          >
-            <MonthCalendar
-              year={year}
-              month={month}
-              selectedDay={selectedDay}
-              dayMarks={dayMarks}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-              onSelectDay={setSelectedDay}
-            />
-            <CalendarEventDetail events={selectedEvents} selectedDay={selectedDay} />
-          </Box>
-
-          <CalendarEventList events={events} onSelectEvent={handleSelectEvent} />
-        </>
+        <Box
+          sx={{
+            p: { xs: 1.5, sm: 2.5 },
+            borderRadius: 3,
+            bgcolor: "background.paper",
+            boxShadow: "0 2px 12px rgba(31, 41, 51, 0.06)"
+          }}
+        >
+          <MonthCalendar
+            year={year}
+            month={month}
+            selectedDay={selectedDay}
+            dayMarks={dayMarks}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            onSelectDay={setSelectedDay}
+          />
+          <CalendarEventDetail events={selectedEvents} selectedDay={selectedDay} />
+        </Box>
       )}
     </Box>
   );

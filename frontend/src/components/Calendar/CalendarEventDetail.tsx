@@ -70,7 +70,7 @@ export default function CalendarEventDetail({ events, selectedDay }: CalendarEve
 
   return (
     <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-      {events.map((event, index) => {
+      {events.map((event) => {
         const range = getEventCalendarRange(event);
         const uncertain = range?.kind === "uncertain";
         const budget = formatBudget(event);
@@ -85,21 +85,11 @@ export default function CalendarEventDetail({ events, selectedDay }: CalendarEve
               bgcolor: "background.paper"
             }}
           >
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
-              <Chip
-                size="small"
-                label={t("calendar.eventTag", { n: index + 1 })}
-                sx={{
-                  fontWeight: 700,
-                  bgcolor: (theme) =>
-                    uncertain ? `${theme.palette.warning.main}22` : `${theme.palette.secondary.main}18`,
-                  color: uncertain ? "warning.dark" : "secondary.dark"
-                }}
-              />
-              {uncertain && (
+            {uncertain && (
+              <Box sx={{ mb: 1.5 }}>
                 <Chip size="small" label={t("calendar.uncertain")} color="warning" variant="outlined" />
-              )}
-            </Box>
+              </Box>
+            )}
 
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
               {event.title}

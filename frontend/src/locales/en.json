@@ -135,18 +135,14 @@
   "calendar": {
     "nav": "Calendar",
     "title": "Adventures calendar",
-    "subtitle": "Past, current, and upcoming trips on one timeline.",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "selectDayHint": "Select a marked day to see the event.",
     "noEventOnDay": "No event on {{date}}.",
-    "eventTag": "Event #{{n}}",
     "uncertain": "Dates approximate",
     "metaDates": "Dates",
     "metaAge": "Age",
     "metaBudget": "Budget",
-    "openEvent": "Open event",
-    "allEvents": "All events",
-    "emptyList": "No events yet."
+    "openEvent": "Open event"
   }
 }
