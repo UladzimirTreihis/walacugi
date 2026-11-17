@@ -135,18 +135,14 @@
   "calendar": {
     "nav": "Kalendarz",
     "title": "Kalendarz przygód",
-    "subtitle": "Minione, bieżące i nadchodzące wyprawy na jednej osi czasu.",
     "prevMonth": "Poprzedni miesiąc",
     "nextMonth": "Następny miesiąc",
     "selectDayHint": "Wybierz oznaczony dzień, aby zobaczyć wydarzenie.",
     "noEventOnDay": "Brak wydarzenia w dniu {{date}}.",
-    "eventTag": "Wydarzenie #{{n}}",
     "uncertain": "Daty przybliżone",
     "metaDates": "Daty",
     "metaAge": "Wiek",
     "metaBudget": "Budżet",
-    "openEvent": "Otwórz wydarzenie",
-    "allEvents": "Wszystkie wydarzenia",
-    "emptyList": "Brak wydarzeń."
+    "openEvent": "Otwórz wydarzenie"
   }
 }
